@@ -1,55 +1,34 @@
-\# ChatGPT JSON Viewer
+# ChatGPT JSON Viewer
 
+A simple viewer for ChatGPT export JSON (conversations.json).
 
+## 🌐 Live Demo
 
-ChatGPTのエクスポートJSON（conversations.json）を読み込んで、
+- https://cocoa0620.github.io/chatgpt-json-viewer/
+- https://cocoa0620.github.io/chatgpt-json-viewer/index_en.html
 
-会話を閲覧・検索できるシンプルなツールです。
+## ✨ Features
 
+- Conversation list
+- Full text view
+- Search (list & content)
+- Pin conversations
+- Conversation size indicator
 
+## 📸 Screenshots
 
-\## 機能
+### List view
+![list](images/Sample2.png)
 
+### Detail view
+![detail](images/Sample1.png)
 
+## 🚀 Usage
 
-\- 会話一覧表示
+1. Open index.html in your browser
+2. Select your conversations.json file
 
-\- 会話本文表示（左右レイアウト）
+## 📝 Notes
 
-\- 一覧検索 / 本文検索
-
-\- ピン留め機能
-
-\- 重さ表示（メッセージ数・文字数）
-
-\- 右下固定「一覧に戻る」ボタン
-
-
-
-\## 使い方
-
-
-
-1\. viewer.html をブラウザで開く
-
-2\. 「バックアップフォルダを選ぶ」から conversations.json を選択
-
-3\. 会話一覧から選択して閲覧
-
-
-
-\## 備考
-
-
-
-ローカルで動作するHTMLファイルです。
-
-インストール不要でそのまま使えます。
-
-## スクリーンショット
-
-### 一覧画面
-![list](images/Sample1.png)
-
-### 本文表示
-![detail](images/Sample2.png)
+- UI is currently Japanese
+- Works entirely in your browser (no data upload)

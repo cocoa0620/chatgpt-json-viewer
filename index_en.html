@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>ChatGPT Backup Viewer</title>
+
+  <style>
+    body {
+      background: #f8f6f2;
+      font-family: sans-serif;
+    }
+
+    .entry {
+      margin: 14px 0;
+      padding: 10px 12px;
+      border-radius: 6px;
+      line-height: 1.7;
+      white-space: pre-wrap;
+      max-width: 75%;
+    }
+
+    .entry.user {
+      background: #ffffff;
+      margin-left: auto;
+      border-right: 4px solid #c0c0c0;
+    }
+
+    .entry.assistant {
+      background: #f0f0f0;
+      margin-right: auto;
+      border-left: 4px solid #8aa3c7;
+    }
+
+    .who {
+      font-size: 0.85em;
+      font-weight: bold;
+      opacity: 0.7;
+      margin-bottom: 4px;
+    }
+
+    .entry.user .who {
+      text-align: right;
+    }
+
+    .entry.assistant .who {
+      text-align: left;
+    }
+
+    button {
+      margin: 8px 0;
+    }
+
+    .toolbar {
+      margin: 12px 0;
+    }
+
+    .searchBox {
+      width: min(520px, 100%);
+      padding: 8px 10px;
+      border: 1px solid #c9c4bb;
+      border-radius: 6px;
+      background: #fff;
+      box-sizing: border-box;
+    }
+
+    .count {
+      margin: 6px 0 12px;
+      color: #555;
+      font-size: 0.9em;
+    }
+
+    .message {
+      margin: 12px 0;
+      color: #555;
+      line-height: 1.6;
+    }
+
+    .message.error {
+      color: #9b2c2c;
+    }
+
+    .conversationLine {
+      cursor: pointer;
+      margin-bottom: 6px;
+      line-height: 1.5;
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+    }
+
+    .pinButton {
+      cursor: pointer;
+      min-width: 2.2em;
+      margin: 0;
+      padding: 2px 6px;
+      border: 1px solid #c9c4bb;
+      border-radius: 6px;
+      background: #fff;
+      color: #555;
+      line-height: 1.4;
+    }
+
+    .pinButton.isPinned {
+      background: #fff1a8;
+      border-color: #d8b84c;
+      color: #4f3b00;
+    }
+
+    .floatingBackButton {
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      z-index: 20;
+      margin: 0;
+      padding: 10px 14px;
+      border: 1px solid #b8b0a4;
+      border-radius: 999px;
+      background: #ffffff;
+      box-shadow: 0 3px 12px rgba(0, 0, 0, 0.18);
+      cursor: pointer;
+    }
+
+    .conversationLabel {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .conversationStats {
+      margin-top: 3px;
+      color: #666;
+      font-size: 0.85em;
+    }
+
+    .weightBar {
+      width: min(220px, 100%);
+      height: 4px;
+      margin-top: 5px;
+      border-radius: 999px;
+      background: #e7e1d6;
+      overflow: hidden;
+    }
+
+    .weightBarFill {
+      height: 100%;
+      min-width: 6px;
+      border-radius: inherit;
+    }
+
+    .weightBarFill.light {
+      background: #6da66f;
+    }
+
+    .weightBarFill.medium {
+      background: #d19a35;
+    }
+
+    .weightBarFill.heavy {
+      background: #b85c52;
+    }
+
+    mark {
+      background: #fff1a8;
+      padding: 0 2px;
+      border-radius: 2px;
+    }
+  </style>
+</head>
+
+<body>
+
+<h1>Backup Viewer</h1>
+<button id="selectFolder">Choose Backup File</button>
+
+<div id="result"></div>
+
+<script>
+const button = document.getElementById("selectFolder");
+const result = document.getElementById("result");
+const searchCache = new WeakMap();
+const messageCache = new WeakMap();
+const pinnedStorageKey = "chatgpt-json-viewer:pinned-conversations";
+const conversationWeightThresholds = {
+  mediumChars: 10000,
+  heavyChars: 50000
+};
+
+function loadPinnedConversationIds() {
+  try {
+    const value = JSON.parse(localStorage.getItem(pinnedStorageKey) || "[]");
+    return new Set(Array.isArray(value) ? value : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function savePinnedConversationIds(ids) {
+  localStorage.setItem(pinnedStorageKey, JSON.stringify([...ids]));
+}
+
+function debounce(fn, wait = 180) {
+  let timer;
+  return (...args) => {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn(...args), wait);
+  };
+}
+
+function normalize(value) {
+  return String(value || "").toLocaleLowerCase();
+}
+
+function showMessage(text, type = "") {
+  result.innerHTML = "";
+
+  const message = document.createElement("div");
+  message.className = type ? `message ${type}` : "message";
+  message.textContent = text;
+  result.appendChild(message);
+}
+
+function isAbortError(error) {
+  return error && error.name === "AbortError";
+}
+
+function isConversationCollection(data) {
+  return data && typeof data === "object";
+}
+
+function countMatches(text, query) {
+  if (!query) return 0;
+
+  const source = normalize(text);
+  return countMatchesInSource(source, query);
+}
+
+function countMatchesInSource(source, query) {
+  if (!query) return 0;
+
+  let count = 0;
+  let from = 0;
+
+  while (true) {
+    const index = source.indexOf(query, from);
+    if (index === -1) break;
+    count++;
+    from = index + query.length;
+  }
+
+  return count;
+}
+
+function appendHighlightedText(target, text, query) {
+  if (!query) {
+    target.textContent = text;
+    return countMatches(text, query);
+  }
+
+  const source = normalize(text);
+  let from = 0;
+  let count = 0;
+
+  while (true) {
+    const index = source.indexOf(query, from);
+    if (index === -1) break;
+
+    target.appendChild(document.createTextNode(text.slice(from, index)));
+
+    const mark = document.createElement("mark");
+    mark.textContent = text.slice(index, index + query.length);
+    target.appendChild(mark);
+
+    count++;
+    from = index + query.length;
+  }
+
+  target.appendChild(document.createTextNode(text.slice(from)));
+  return count;
+}
+
+function getConversationWeight(charCount) {
+  if (charCount >= conversationWeightThresholds.heavyChars) {
+    return { level: "heavy", label: "Heavy" };
+  }
+
+  if (charCount >= conversationWeightThresholds.mediumChars) {
+    return { level: "medium", label: "Medium" };
+  }
+
+  return { level: "light", label: "Light" };
+}
+
+function getConversationMeta(convo) {
+  if (searchCache.has(convo)) return searchCache.get(convo);
+
+  const title = convo.title || "(Untitled)";
+  const time = convo.create_time
+    ? new Date(convo.create_time * 1000).toLocaleString()
+    : "Unknown date";
+  const label = `${time}  ${title}`;
+  const messages = getConversationMessages(convo);
+  const charCount = messages.reduce((total, item) => total + item.text.length, 0);
+  const weight = getConversationWeight(charCount);
+  const meta = {
+    title,
+    time,
+    label,
+    messageCount: messages.length,
+    charCount,
+    weight,
+    weightRatio: Math.min(charCount / conversationWeightThresholds.heavyChars, 1),
+    searchable: normalize(label)
+  };
+
+  searchCache.set(convo, meta);
+  return meta;
+}
+
+function getConversationMessages(convo) {
+  if (messageCache.has(convo)) return messageCache.get(convo);
+
+  const messages = convo.mapping || {};
+  const items = [];
+
+  for (const key in messages) {
+    const msg = messages[key].message;
+    if (!msg || !msg.content) continue;
+
+    const parts = msg.content.parts || [];
+    const text = parts.join("").trim();
+    if (!text) continue;
+
+    items.push({
+      role: msg.author && msg.author.role ? msg.author.role : "unknown",
+      text
+    });
+  }
+
+  messageCache.set(convo, items);
+  return items;
+}
+
+function createSearchControls(placeholder, onInput, onReset) {
+  const toolbar = document.createElement("div");
+  toolbar.className = "toolbar";
+
+  const search = document.createElement("input");
+  search.className = "searchBox";
+  search.type = "search";
+  search.placeholder = placeholder;
+  search.autocomplete = "off";
+
+  const reset = document.createElement("button");
+  reset.type = "button";
+  reset.textContent = "Reset Search";
+  reset.hidden = true;
+
+  const run = () => {
+    reset.hidden = !search.value;
+    onInput();
+  };
+
+  search.addEventListener("input", debounce(run));
+  reset.addEventListener("click", () => {
+    search.value = "";
+    reset.hidden = true;
+    onReset();
+  });
+
+  toolbar.appendChild(search);
+  toolbar.appendChild(reset);
+
+  return { toolbar, search, reset };
+}
+
+// Recursively find conversations.json
+async function findConversationsJson(dirHandle) {
+  for await (const [name, handle] of dirHandle.entries()) {
+    if (handle.kind === "file" && name === "conversations.json") {
+      return handle;
+    }
+    if (handle.kind === "directory") {
+      const found = await findConversationsJson(handle);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
+button.addEventListener("click", async () => {
+  result.textContent = "Starting...";
+
+  try {
+    if (!window.showOpenFilePicker) {
+      showMessage("This browser does not support file selection. Please open this page in Chrome or Edge.", "error");
+      return;
+    }
+
+    const [fileHandle] = await window.showOpenFilePicker({
+      types: [{
+        description: "ChatGPT Backup",
+        accept: { "application/json": [".json"] }
+      }]
+    });
+
+    if (!fileHandle) {
+      showMessage("No file was selected.");
+      return;
+    }
+
+    const file = await fileHandle.getFile();
+    const text = await file.text();
+    const data = JSON.parse(text);
+
+    if (!isConversationCollection(data)) {
+      showMessage("The conversation data format is not recognized. Please choose conversations.json.", "error");
+      return;
+    }
+
+    showList(data);
+
+  } catch (e) {
+    if (isAbortError(e)) {
+      showMessage("File selection was canceled.");
+      return;
+    }
+
+    showMessage("Could not load JSON. Please check the file contents.", "error");
+  }
+});
+
+// Show conversation list
+function showList(data) {
+  result.innerHTML = "";
+
+  const header = document.createElement("h3");
+  header.textContent = "Conversation List";
+  result.appendChild(header);
+
+  const count = document.createElement("div");
+  count.className = "count";
+
+  const list = document.createElement("div");
+  const pinnedIds = loadPinnedConversationIds();
+  const conversations = Object.keys(data)
+    .map((id, index) => ({ id, index, convo: data[id] }))
+    .filter((item) => item.convo);
+
+  if (conversations.length === 0) {
+    count.textContent = "0 conversations";
+    result.appendChild(count);
+    const empty = document.createElement("div");
+    empty.className = "message";
+    empty.textContent = "There are no conversations to display.";
+    result.appendChild(empty);
+    return;
+  }
+
+  const controls = createSearchControls(
+    "Search conversations",
+    () => render(),
+    () => render()
+  );
+
+  result.appendChild(controls.toolbar);
+  result.appendChild(count);
+  result.appendChild(list);
+
+  const render = () => {
+    const query = normalize(controls.search.value.trim());
+    const fragment = document.createDocumentFragment();
+    let visible = 0;
+    let hits = 0;
+
+    const sortedConversations = [...conversations].sort((a, b) => {
+      const pinnedA = pinnedIds.has(a.id);
+      const pinnedB = pinnedIds.has(b.id);
+      if (pinnedA !== pinnedB) return pinnedA ? -1 : 1;
+      return a.index - b.index;
+    });
+
+    for (const { id, convo } of sortedConversations) {
+      const meta = getConversationMeta(convo);
+      const matchCount = countMatchesInSource(meta.searchable, query);
+
+      if (query && matchCount === 0) continue;
+
+      visible++;
+      hits += matchCount;
+
+      const isPinned = pinnedIds.has(id);
+      const line = document.createElement("div");
+      line.className = "conversationLine";
+      line.title = isPinned ? "Pinned" : "";
+
+      const pin = document.createElement("button");
+      pin.type = "button";
+      pin.className = isPinned ? "pinButton isPinned" : "pinButton";
+      pin.textContent = isPinned ? "★" : "☆";
+      pin.setAttribute("aria-label", isPinned ? "Unpin conversation" : "Pin conversation");
+      pin.title = isPinned ? "Unpin conversation" : "Pin conversation";
+      pin.onclick = (event) => {
+        event.stopPropagation();
+
+        if (pinnedIds.has(id)) {
+          pinnedIds.delete(id);
+        } else {
+          pinnedIds.add(id);
+        }
+
+        savePinnedConversationIds(pinnedIds);
+        render();
+      };
+
+      const label = document.createElement("div");
+      label.className = "conversationLabel";
+
+      const titleLine = document.createElement("div");
+      appendHighlightedText(titleLine, meta.label, query);
+
+      const stats = document.createElement("div");
+      stats.className = "conversationStats";
+      stats.textContent = `${meta.messageCount.toLocaleString()} messages / ${meta.charCount.toLocaleString()} characters / ${meta.weight.label}`;
+
+      const weightBar = document.createElement("div");
+      weightBar.className = "weightBar";
+      weightBar.title = `${meta.charCount.toLocaleString()} characters`;
+
+      const weightBarFill = document.createElement("div");
+      weightBarFill.className = `weightBarFill ${meta.weight.level}`;
+      weightBarFill.style.width = `${Math.max(meta.weightRatio * 100, 2)}%`;
+
+      weightBar.appendChild(weightBarFill);
+      label.appendChild(titleLine);
+      label.appendChild(stats);
+      label.appendChild(weightBar);
+
+      line.appendChild(pin);
+      line.appendChild(label);
+      line.onclick = () => showConversation(convo, data);
+      fragment.appendChild(line);
+    }
+
+    count.textContent = query
+      ? `${visible} conversations / ${hits} matches`
+      : `${conversations.length} conversations`;
+
+    if (query && visible === 0) {
+      const empty = document.createElement("div");
+      empty.className = "message";
+      empty.textContent = "No matching conversations found.";
+      fragment.appendChild(empty);
+    }
+
+    list.replaceChildren(fragment);
+  };
+
+  render();
+}
+
+// Show conversation body
+function showConversation(convo, data) {
+  result.innerHTML = "";
+  const returnToList = () => showList(data);
+
+  const back = document.createElement("button");
+  back.textContent = "← Back to Conversation List";
+  back.onclick = returnToList;
+  result.appendChild(back);
+
+  const floatingBack = document.createElement("button");
+  floatingBack.type = "button";
+  floatingBack.className = "floatingBackButton";
+  floatingBack.textContent = "Back to List";
+  floatingBack.onclick = returnToList;
+  result.appendChild(floatingBack);
+
+  const title = document.createElement("h3");
+  title.textContent = convo.title || "(Untitled)";
+  result.appendChild(title);
+
+  const count = document.createElement("div");
+  count.className = "count";
+
+  const conversationBody = document.createElement("div");
+  const messages = getConversationMessages(convo);
+  const controls = createSearchControls(
+    "Search this conversation",
+    () => render(),
+    () => render()
+  );
+
+  result.appendChild(controls.toolbar);
+  result.appendChild(count);
+  result.appendChild(conversationBody);
+
+  const render = () => {
+    const query = normalize(controls.search.value.trim());
+    const fragment = document.createDocumentFragment();
+    let hitMessages = 0;
+    let hits = 0;
+
+    for (const item of messages) {
+      const matchCount = countMatches(item.text, query);
+
+      if (query && matchCount === 0) continue;
+
+      if (matchCount > 0) hitMessages++;
+      hits += matchCount;
+
+      const block = document.createElement("div");
+      block.className = `entry ${item.role}`;
+
+      const who = document.createElement("div");
+      who.className = "who";
+      who.textContent = item.role;
+
+      const body = document.createElement("div");
+      appendHighlightedText(body, item.text, query);
+
+      block.appendChild(who);
+      block.appendChild(body);
+      fragment.appendChild(block);
+    }
+
+    count.textContent = query
+      ? `${hitMessages} messages / ${hits} matches`
+      : `${messages.length} messages`;
+
+    if (!query && messages.length === 0) {
+      const empty = document.createElement("div");
+      empty.className = "message";
+      empty.textContent = "There is no message content to display.";
+      fragment.appendChild(empty);
+    } else if (query && hitMessages === 0) {
+      const empty = document.createElement("div");
+      empty.className = "message";
+      empty.textContent = "No matching message content found.";
+      fragment.appendChild(empty);
+    }
+
+    conversationBody.replaceChildren(fragment);
+  };
+
+  render();
+}
+</script>
+
+</body>
+</html>
