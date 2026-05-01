@@ -38,7 +38,9 @@ Then select your `conversations.json` file.
 
 ## 📝 Notes
 
-- UI is currently Japanese
+- Japanese and English versions are available:
+- JP: /
+- EN: /index_en.html
 - Works entirely in your browser (no data upload)
 
 ## 🔒 Privacy
