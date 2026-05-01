@@ -2,7 +2,10 @@
 
 A lightweight viewer for ChatGPT export data.
 
-This tool reads your `conversations.json` file and lets you browse your conversations and images directly in your browser.
+This tool reads your `conversations.json` file and lets you browse your conversations and images directly in your browser, with a dedicated image gallery view.
+
+- Browse all images included in your export  
+- Designed for easy browsing, even with large exports
 
 ---
 
@@ -25,7 +28,7 @@ This tool reads your `conversations.json` file and lets you browse your conversa
 4. Open the viewer and select:
 
    * `conversations.json`
-   * your export folder (for images)
+   * your unzipped export folder
 
 ---
 
@@ -42,6 +45,7 @@ This tool reads your `conversations.json` file and lets you browse your conversa
 ### 🖼 Image View
 
 * Browse all images included in your export
+Designed for easy browsing even with large exports.
 * Separate views for:
 
   * User images
@@ -81,7 +85,7 @@ This tool reads your `conversations.json` file and lets you browse your conversa
 * Requires selecting both:
 
   * `conversations.json`
-  * export folder (for image display)
+  * unzipped export folder
 
 * Image-to-chat mapping is not fully reconstructed
   (images are shown in a separate gallery view for better usability)
