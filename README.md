@@ -46,3 +46,10 @@ ChatGPTのエクスポートJSON（conversations.json）を読み込んで、
 
 インストール不要でそのまま使えます。
 
+## スクリーンショット
+
+### 一覧画面
+![list](images/list.png)
+
+### 本文表示
+![detail](images/detail.png)
