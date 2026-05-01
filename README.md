@@ -40,3 +40,11 @@ Then select your `conversations.json` file.
 
 - UI is currently Japanese
 - Works entirely in your browser (no data upload)
+
+## 🔒 Privacy
+
+This tool runs entirely in your browser.
+
+- No data is uploaded
+- No server communication
+- Your JSON file stays on your device
