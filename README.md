@@ -49,7 +49,7 @@ ChatGPTのエクスポートJSON（conversations.json）を読み込んで、
 ## スクリーンショット
 
 ### 一覧画面
-![list](images/list.png)
+![list](images/Sample1.png)
 
 ### 本文表示
-![detail](images/detail.png)
+![detail](images/Sample2.png)
