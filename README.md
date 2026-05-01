@@ -1,11 +1,31 @@
 # ChatGPT JSON Viewer
 
-A simple viewer for ChatGPT export JSON (conversations.json).
+A simple viewer for ChatGPT export data.
+
+It reads the `conversations.json` file from your ChatGPT export and lets you browse and search your conversations.
+
+---
 
 ## 🌐 Live Demo
 
-- https://cocoa0620.github.io/chatgpt-json-viewer/
-- https://cocoa0620.github.io/chatgpt-json-viewer/index_en.html
+- Japanese: https://cocoa0620.github.io/chatgpt-json-viewer/
+- English: https://cocoa0620.github.io/chatgpt-json-viewer/index_en.html
+
+---
+
+## 🚀 How to use
+
+1. Export your data from ChatGPT  
+   (Settings → Data Controls → Export)
+
+2. Download the ZIP file from the email
+
+3. Unzip the file
+
+4. Open the viewer and select  
+   `conversations.json`
+
+---
 
 ## ✨ Features
 
@@ -15,6 +35,8 @@ A simple viewer for ChatGPT export JSON (conversations.json).
 - Pin conversations
 - Conversation size indicator
 
+---
+
 ## 📸 Screenshots
 
 ### List view
@@ -23,27 +45,15 @@ A simple viewer for ChatGPT export JSON (conversations.json).
 ### Detail view
 ![detail](images/Sample1.png)
 
-## 🚀 Usage
-
-### Option 1: Use online (recommended)
-Open the viewer in your browser:
-https://cocoa0620.github.io/chatgpt-json-viewer/
-
-Then select your `conversations.json` file.
-
-### Option 2: Use locally
-1. Download this repository (ZIP)
-2. Open `index.html` in your browser
-3. Select your `conversations.json` file
+---
 
 ## 📝 Notes
 
-- Japanese and English versions are available:
-- JP: /
-- EN: /index_en.html
 - Works entirely in your browser (no data upload)
 - Currently supports text only
-- Image display is not yet supported
+- Image and file attachments are not supported in this version
+
+---
 
 ## 🔒 Privacy
 
