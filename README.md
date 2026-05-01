@@ -56,7 +56,6 @@ Designed for easy browsing even with large exports.
 * Thumbnail grid with click-to-expand
 * Supports PNG, JPG, WEBP, and GIF
 
----
 
 ---
 
@@ -74,7 +73,6 @@ Designed for easy browsing even with large exports.
 
 ![detail](images/Sample1.png)
 
----
 
 ---
 
