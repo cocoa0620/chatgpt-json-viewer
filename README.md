@@ -104,8 +104,8 @@ This tool runs entirely in your browser.
 
 ## 💡 Why Image View?
 
-ChatGPT export data does not always provide a reliable link between messages and image files.
+ChatGPT export data doesn’t always reliably link messages and image files.
 
-Instead of forcing incomplete reconstruction, this tool provides a dedicated image gallery for easier browsing.
+Instead of trying to fully reconstruct conversations, this tool provides a simple image gallery for easier browsing.
 
 
