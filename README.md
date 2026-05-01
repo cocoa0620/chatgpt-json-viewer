@@ -54,7 +54,13 @@ This tool reads your `conversations.json` file and lets you browse your conversa
 
 ---
 
+---
+
 ## 📸 Screenshots
+
+### Image View
+
+![image-view](images/Sample3.png)
 
 ### List view
 
@@ -63,6 +69,8 @@ This tool reads your `conversations.json` file and lets you browse your conversa
 ### Detail view
 
 ![detail](images/Sample1.png)
+
+---
 
 ---
 
