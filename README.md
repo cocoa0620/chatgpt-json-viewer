@@ -42,6 +42,8 @@ Then select your `conversations.json` file.
 - JP: /
 - EN: /index_en.html
 - Works entirely in your browser (no data upload)
+- Currently supports text only
+- Image display is not yet supported
 
 ## 🔒 Privacy
 
