@@ -25,8 +25,16 @@ A simple viewer for ChatGPT export JSON (conversations.json).
 
 ## 🚀 Usage
 
-1. Open index.html in your browser
-2. Select your conversations.json file
+### Option 1: Use online (recommended)
+Open the viewer in your browser:
+https://cocoa0620.github.io/chatgpt-json-viewer/
+
+Then select your `conversations.json` file.
+
+### Option 2: Use locally
+1. Download this repository (ZIP)
+2. Open `index.html` in your browser
+3. Select your `conversations.json` file
 
 ## 📝 Notes
 
