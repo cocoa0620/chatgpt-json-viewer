@@ -5,37 +5,84 @@
   <title>ChatGPT バックアップビューア</title>
 
   <style>
+    :root {
+      color-scheme: light;
+      --bg: #ffffff;
+      --surface: #ffffff;
+      --surface-muted: #f7f7f8;
+      --surface-hover: #f3f4f6;
+      --border: #e5e5e5;
+      --border-strong: #d7d7d7;
+      --text: #1f2328;
+      --text-muted: #6b7280;
+      --accent: #10a37f;
+      --mark: #fff7cc;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
     body {
-      background: #f8f6f2;
-      font-family: sans-serif;
+      margin: 0;
+      padding: 28px;
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 16px;
+      line-height: 1.7;
+    }
+
+    h1,
+    h3 {
+      margin: 0 0 18px;
+      font-weight: 650;
+      line-height: 1.35;
+      letter-spacing: 0;
+    }
+
+    h1 {
+      font-size: 1.8rem;
+    }
+
+    h3 {
+      margin-top: 24px;
+      font-size: 1.2rem;
     }
 
     .entry {
-      margin: 14px 0;
-      padding: 10px 12px;
-      border-radius: 6px;
-      line-height: 1.7;
+      margin: 18px 0;
+      padding: 16px 18px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      line-height: 1.85;
       white-space: pre-wrap;
       max-width: 75%;
+      transition: background-color 120ms ease, border-color 120ms ease;
+    }
+
+    .entry:hover {
+      background: var(--surface-hover);
+      border-color: var(--border-strong);
     }
 
     .entry.user {
-      background: #ffffff;
+      background: var(--surface);
       margin-left: auto;
-      border-right: 4px solid #c0c0c0;
+      border-right: 3px solid var(--border-strong);
     }
 
     .entry.assistant {
-      background: #f0f0f0;
+      background: var(--surface-muted);
       margin-right: auto;
-      border-left: 4px solid #8aa3c7;
+      border-left: 3px solid var(--accent);
     }
 
     .who {
       font-size: 0.85em;
-      font-weight: bold;
-      opacity: 0.7;
-      margin-bottom: 4px;
+      font-weight: 650;
+      color: var(--text-muted);
+      margin-bottom: 8px;
     }
 
     .entry.user .who {
@@ -47,63 +94,116 @@
     }
 
     button {
-      margin: 8px 0;
+      margin: 10px 0;
+      padding: 8px 13px;
+      border: 1px solid var(--border-strong);
+      border-radius: 8px;
+      background: var(--surface);
+      color: var(--text);
+      font: inherit;
+      line-height: 1.35;
+      cursor: pointer;
+      transition: background-color 120ms ease, border-color 120ms ease;
+    }
+
+    button:hover {
+      background: var(--surface-hover);
+      border-color: #c9c9c9;
     }
 
     .toolbar {
-      margin: 12px 0;
+      margin: 18px 0;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
     }
 
     .searchBox {
       width: min(520px, 100%);
-      padding: 8px 10px;
-      border: 1px solid #c9c4bb;
-      border-radius: 6px;
-      background: #fff;
-      box-sizing: border-box;
+      padding: 10px 12px;
+      border: 1px solid var(--border-strong);
+      border-radius: 8px;
+      background: var(--surface);
+      color: var(--text);
+      font: inherit;
+      line-height: 1.4;
+    }
+
+    .searchBox:focus {
+      border-color: var(--accent);
+      outline: 3px solid rgba(16, 163, 127, 0.12);
     }
 
     .count {
-      margin: 6px 0 12px;
-      color: #555;
+      margin: 8px 0 18px;
+      color: var(--text-muted);
       font-size: 0.9em;
     }
 
     .message {
-      margin: 12px 0;
-      color: #555;
-      line-height: 1.6;
+      margin: 18px 0;
+      color: var(--text-muted);
+      line-height: 1.8;
     }
 
     .message.error {
       color: #9b2c2c;
     }
 
+    .hiddenMessageDivider {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 4px 0;
+      color: var(--text-muted);
+      font-size: 0.82em;
+      line-height: 1.4;
+    }
+
+    .hiddenMessageDivider::before,
+    .hiddenMessageDivider::after {
+      content: "";
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    .hiddenMessageDividerText {
+      white-space: nowrap;
+    }
+
     .conversationLine {
       cursor: pointer;
-      margin-bottom: 6px;
-      line-height: 1.5;
+      margin-bottom: 8px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      line-height: 1.6;
       display: flex;
       align-items: flex-start;
-      gap: 8px;
+      gap: 10px;
+      transition: background-color 120ms ease;
+    }
+
+    .conversationLine:hover {
+      background: var(--surface-hover);
     }
 
     .pinButton {
-      cursor: pointer;
       min-width: 2.2em;
       margin: 0;
-      padding: 2px 6px;
-      border: 1px solid #c9c4bb;
+      padding: 3px 7px;
+      border: 1px solid var(--border-strong);
       border-radius: 6px;
-      background: #fff;
-      color: #555;
+      background: var(--surface);
+      color: var(--text-muted);
       line-height: 1.4;
     }
 
     .pinButton.isPinned {
-      background: #fff1a8;
-      border-color: #d8b84c;
-      color: #4f3b00;
+      background: #f1f8f5;
+      border-color: rgba(16, 163, 127, 0.35);
+      color: var(--accent);
     }
 
     .floatingBackButton {
@@ -113,11 +213,10 @@
       z-index: 20;
       margin: 0;
       padding: 10px 14px;
-      border: 1px solid #b8b0a4;
+      border: 1px solid var(--border-strong);
       border-radius: 999px;
-      background: #ffffff;
-      box-shadow: 0 3px 12px rgba(0, 0, 0, 0.18);
-      cursor: pointer;
+      background: var(--surface);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.10);
     }
 
     .conversationLabel {
@@ -126,17 +225,208 @@
     }
 
     .conversationStats {
-      margin-top: 3px;
-      color: #666;
+      margin-top: 5px;
+      color: var(--text-muted);
       font-size: 0.85em;
+    }
+
+    .viewTabs {
+      margin: 18px 0;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .viewTab {
+      margin: 0;
+    }
+
+    .viewTab.isActive {
+      background: #f1f8f5;
+      border-color: rgba(16, 163, 127, 0.35);
+      color: var(--accent);
+    }
+
+    .imageGrid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 14px;
+      margin: 12px 0 26px;
+    }
+
+    .imageTile {
+      position: relative;
+      min-width: 0;
+    }
+
+    .imageTileName {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 2;
+      max-height: 55%;
+      overflow: hidden;
+      padding: 6px 8px;
+      border-radius: 0 0 8px 8px;
+      background: rgba(0, 0, 0, 0.68);
+      color: #ffffff;
+      font-size: 0.82em;
+      line-height: 1.35;
+      opacity: 0;
+      overflow-wrap: anywhere;
+      pointer-events: none;
+      transition: opacity 120ms ease;
+    }
+
+    .imageTile:hover .imageTileName,
+    .imageTile:focus-within .imageTileName {
+      opacity: 1;
+    }
+
+    .attachmentPlaceholders {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .attachmentPlaceholder {
+      display: inline-flex;
+      align-items: center;
+      border: 1px solid var(--border-strong);
+      border-radius: 999px;
+      padding: 3px 9px;
+      background: var(--surface);
+      color: var(--text-muted);
+      font-size: 0.85em;
+      line-height: 1.4;
+    }
+
+    .attachmentSourceLabel {
+      align-self: center;
+      color: var(--text-muted);
+      font-size: 0.78em;
+      line-height: 1.4;
+    }
+
+    .attachmentDebug {
+      width: 100%;
+      margin-top: 4px;
+      color: var(--text-muted);
+      font-size: 0.86em;
+    }
+
+    .attachmentDebug summary {
+      width: fit-content;
+      cursor: pointer;
+      list-style-position: inside;
+    }
+
+    .attachmentDebugPanel {
+      margin-top: 8px;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface-muted);
+      white-space: normal;
+    }
+
+    .attachmentDebugPanel pre {
+      max-height: 280px;
+      overflow: auto;
+      margin: 6px 0 12px;
+      padding: 8px;
+      border-radius: 6px;
+      background: var(--surface);
+      color: var(--text);
+      font-size: 0.86em;
+      line-height: 1.45;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .attachmentDebugPanel pre:last-child {
+      margin-bottom: 0;
+    }
+
+    .attachmentThumbnailButton {
+      margin: 0;
+      padding: 0;
+      border: 1px solid var(--border-strong);
+      border-radius: 8px;
+      background: var(--surface);
+      overflow: hidden;
+      line-height: 0;
+    }
+
+    .attachmentThumbnailButton:hover {
+      background: var(--surface);
+      border-color: #c9c9c9;
+    }
+
+    .attachmentThumbnail {
+      display: block;
+      width: 160px;
+      max-width: 100%;
+      height: 120px;
+      object-fit: cover;
+    }
+
+    .imageLightbox {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 28px;
+      background: rgba(0, 0, 0, 0.72);
+    }
+
+    .imageLightbox[hidden] {
+      display: none;
+    }
+
+    .imageLightboxImage {
+      max-width: min(100%, 1100px);
+      max-height: 84vh;
+      border-radius: 8px;
+      background: #ffffff;
+      object-fit: contain;
+    }
+
+    .imageLightboxCaption {
+      max-width: min(100%, 1100px);
+      margin-top: 10px;
+      color: #ffffff;
+      font-size: 0.9em;
+      line-height: 1.4;
+      overflow-wrap: anywhere;
+      text-align: center;
+    }
+
+    .imageLightboxClose {
+      position: fixed;
+      top: 18px;
+      right: 18px;
+      margin: 0;
+      color: #ffffff;
+      border-color: rgba(255, 255, 255, 0.35);
+      background: rgba(0, 0, 0, 0.35);
+    }
+
+    .imageLightboxClose:hover {
+      background: rgba(255, 255, 255, 0.12);
     }
 
     .weightBar {
       width: min(220px, 100%);
       height: 4px;
-      margin-top: 5px;
+      margin-top: 7px;
       border-radius: 999px;
-      background: #e7e1d6;
+      background: #ededed;
       overflow: hidden;
     }
 
@@ -159,7 +449,7 @@
     }
 
     mark {
-      background: #fff1a8;
+      background: var(--mark);
       padding: 0 2px;
       border-radius: 2px;
     }
@@ -169,15 +459,30 @@
 <body>
 
 <h1>バックアップビューア</h1>
-<button id="selectFolder">バックアップフォルダを選ぶ</button>
+<button id="selectFile">conversations.json を選ぶ</button>
+<button id="selectExportFolder">エクスポートフォルダを選ぶ</button>
 
 <div id="result"></div>
 
+<div id="imageLightbox" class="imageLightbox" hidden>
+  <button id="closeLightbox" class="imageLightboxClose" type="button">閉じる</button>
+  <img id="imageLightboxImage" class="imageLightboxImage" alt="">
+  <div id="imageLightboxCaption" class="imageLightboxCaption"></div>
+</div>
+
 <script>
-const button = document.getElementById("selectFolder");
+const fileButton = document.getElementById("selectFile");
+const folderButton = document.getElementById("selectExportFolder");
 const result = document.getElementById("result");
+const imageLightbox = document.getElementById("imageLightbox");
+const imageLightboxImage = document.getElementById("imageLightboxImage");
+const imageLightboxCaption = document.getElementById("imageLightboxCaption");
+const closeLightbox = document.getElementById("closeLightbox");
 const searchCache = new WeakMap();
 const messageCache = new WeakMap();
+const messageDebugCache = new WeakMap();
+let currentImageLibrary = createEmptyImageLibrary();
+const debugImageMatching = true;
 const pinnedStorageKey = "chatgpt-json-viewer:pinned-conversations";
 const conversationWeightThresholds = {
   mediumChars: 10000,
@@ -207,6 +512,304 @@ function debounce(fn, wait = 180) {
 
 function normalize(value) {
   return String(value || "").toLocaleLowerCase();
+}
+
+function normalizeLookupKey(value) {
+  return normalize(value)
+    .replace(/^file-service:\/\//, "")
+    .replace(/^sandbox:\//, "")
+    .replace(/[?#].*$/, "")
+    .replace(/^\/+/, "");
+}
+
+function getBaseName(value) {
+  return normalizeLookupKey(value).split(/[\\/]/).filter(Boolean).pop() || "";
+}
+
+function getStem(value) {
+  return getBaseName(value).replace(/\.[^.]+$/, "");
+}
+
+function extractUuids(value) {
+  const matches = String(value || "").match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi);
+  return matches ? matches.map((uuid) => uuid.toLowerCase()) : [];
+}
+
+function isImageFileName(name) {
+  return /\.(gif|jpe?g|png|webp)$/i.test(name);
+}
+
+function createEmptyImageLibrary() {
+  return {
+    byPath: new Map(),
+    byName: new Map(),
+    byStem: new Map(),
+    byUuidFolder: new Map(),
+    filePaths: new Map(),
+    files: [],
+    records: [],
+    samples: [],
+    urls: new Map(),
+    count: 0
+  };
+}
+
+function cleanupImageLibrary(library) {
+  if (!library) return;
+
+  for (const url of library.urls.values()) {
+    URL.revokeObjectURL(url);
+  }
+}
+
+function addImageToLibrary(library, file, path) {
+  const normalizedPath = normalizeLookupKey(path);
+  const name = normalizeLookupKey(file.name);
+  const stem = getStem(file.name);
+  const folders = normalizedPath.split(/[\\/]/).slice(0, -1);
+  const uuidFolders = folders.flatMap((folder) => extractUuids(folder));
+
+  library.filePaths.set(file, path);
+  library.byPath.set(normalizedPath, file);
+  library.byName.set(name, file);
+  library.files.push(file);
+  library.records.push({
+    fileName: file.name,
+    stem,
+    relativePath: path
+  });
+  if (stem && !library.byStem.has(stem)) {
+    library.byStem.set(stem, file);
+  }
+  for (const uuid of uuidFolders) {
+    if (!library.byUuidFolder.has(uuid)) {
+      library.byUuidFolder.set(uuid, []);
+    }
+    library.byUuidFolder.get(uuid).push(file);
+  }
+  if (library.samples.length < 12) {
+    library.samples.push({
+      fileName: file.name,
+      relativePath: path,
+      stem,
+      uuidFolders
+    });
+  }
+  library.count++;
+}
+
+function getObjectUrlForFile(file) {
+  if (!file) return "";
+
+  if (!currentImageLibrary.urls.has(file)) {
+    currentImageLibrary.urls.set(file, URL.createObjectURL(file));
+  }
+
+  return currentImageLibrary.urls.get(file);
+}
+
+function dedupeFiles(files) {
+  const seen = new Set();
+
+  return files.filter((file) => {
+    if (seen.has(file)) return false;
+    seen.add(file);
+    return true;
+  });
+}
+
+function getPicNumber(stem) {
+  const match = String(stem || "").match(/-pic(\d+)/i);
+  return match ? Number(match[1]) : Number.POSITIVE_INFINITY;
+}
+
+function compareStemPrefixMatches(a, b) {
+  const aStem = getStem(a.name);
+  const bStem = getStem(b.name);
+  const lengthDiff = aStem.length - bStem.length;
+  if (lengthDiff !== 0) return lengthDiff;
+
+  const picDiff = getPicNumber(aStem) - getPicNumber(bStem);
+  if (picDiff !== 0) return picDiff;
+
+  const aPath = currentImageLibrary.filePaths.get(a) || a.name;
+  const bPath = currentImageLibrary.filePaths.get(b) || b.name;
+  return aPath.localeCompare(bPath);
+}
+
+function getStemPrefixMatch(stem) {
+  if (!stem) return null;
+
+  const matches = currentImageLibrary.files
+    .filter((file) => {
+      const localStem = getStem(file.name);
+      return localStem !== stem && localStem.startsWith(stem);
+    })
+    .sort(compareStemPrefixMatches);
+
+  return matches[0] || null;
+}
+
+function getImageMatchDebug(attachment) {
+  const files = [];
+  const attempts = [];
+
+  if (!attachment || attachment.type !== "image") {
+    return { files, attempts };
+  }
+
+  for (const candidate of attachment.candidates) {
+    const normalized = normalizeLookupKey(candidate);
+    const baseName = getBaseName(candidate);
+    const stem = getStem(candidate);
+    const uuids = extractUuids(candidate);
+
+    const pathMatch = currentImageLibrary.byPath.get(normalized) || null;
+    attempts.push({
+      kind: "path",
+      key: normalized,
+      matched: Boolean(pathMatch),
+      files: pathMatch ? [currentImageLibrary.filePaths.get(pathMatch) || pathMatch.name] : []
+    });
+    if (pathMatch) files.push(pathMatch);
+
+    const nameMatch = currentImageLibrary.byName.get(baseName) || null;
+    attempts.push({
+      kind: "file name",
+      key: baseName,
+      matched: Boolean(nameMatch),
+      files: nameMatch ? [currentImageLibrary.filePaths.get(nameMatch) || nameMatch.name] : []
+    });
+    if (nameMatch) files.push(nameMatch);
+
+    const stemMatch = currentImageLibrary.byStem.get(stem) || null;
+    attempts.push({
+      kind: "stem",
+      key: stem,
+      matched: Boolean(stemMatch),
+      files: stemMatch ? [currentImageLibrary.filePaths.get(stemMatch) || stemMatch.name] : []
+    });
+    if (stemMatch) files.push(stemMatch);
+
+    const stemPrefixMatch = stemMatch ? null : getStemPrefixMatch(stem);
+    attempts.push({
+      kind: "stem startsWith",
+      key: stem,
+      matched: Boolean(stemPrefixMatch),
+      files: stemPrefixMatch ? [currentImageLibrary.filePaths.get(stemPrefixMatch) || stemPrefixMatch.name] : []
+    });
+    if (stemPrefixMatch) files.push(stemPrefixMatch);
+
+    for (const uuid of uuids) {
+      const uuidMatches = currentImageLibrary.byUuidFolder.get(uuid) || [];
+      attempts.push({
+        kind: "uuid folder",
+        key: uuid,
+        matched: uuidMatches.length > 0,
+        files: uuidMatches.map((file) => currentImageLibrary.filePaths.get(file) || file.name)
+      });
+      files.push(...uuidMatches);
+    }
+  }
+
+  if (files.length === 0 && attachment.fallbackFile) {
+    attempts.push({
+      kind: "same user folder unused",
+      key: currentImageLibrary.filePaths.get(attachment.fallbackFile) || attachment.fallbackFile.name,
+      matched: true,
+      files: [currentImageLibrary.filePaths.get(attachment.fallbackFile) || attachment.fallbackFile.name]
+    });
+    files.push(attachment.fallbackFile);
+  }
+
+  return { files: dedupeFiles(files), attempts };
+}
+
+function getImageAssignmentKey(file) {
+  const localPath = currentImageLibrary.filePaths.get(file);
+  return localPath ? `path:${localPath}` : `file:${file.name}:${file.size}:${file.lastModified}`;
+}
+
+function getUserFolderPath(path) {
+  const parts = String(path || "").split(/[\\/]/).filter(Boolean);
+  const index = parts.findIndex((part) => /^user-/i.test(part));
+  return index === -1 ? "" : parts.slice(0, index + 1).join("/");
+}
+
+function getUnusedUserFolderImage(usedImageKeys, preferredFolder = "") {
+  const candidates = currentImageLibrary.files
+    .map((file) => {
+      const path = currentImageLibrary.filePaths.get(file) || file.name;
+      return { file, path, folder: getUserFolderPath(path) };
+    })
+    .filter((candidate) => candidate.folder)
+    .filter((candidate) => !usedImageKeys.has(getImageAssignmentKey(candidate.file)))
+    .sort((a, b) => a.path.localeCompare(b.path));
+
+  return (candidates.find((candidate) => candidate.folder === preferredFolder) || candidates[0] || {}).file || null;
+}
+
+function markMatchedImagesUsed(attachments, usedImageKeys) {
+  for (const attachment of attachments) {
+    if (attachment.type !== "image") continue;
+
+    const imageFile = getImageMatchDebug(attachment).files[0];
+    if (imageFile) {
+      usedImageKeys.add(getImageAssignmentKey(imageFile));
+    }
+  }
+}
+
+function getNearbyImageCandidates(attachment, limit = 12) {
+  if (!attachment || attachment.type !== "image") return [];
+
+  const keys = attachment.debug && Array.isArray(attachment.debug.matchKeys)
+    ? attachment.debug.matchKeys
+    : [];
+  const uuids = new Set(keys.flatMap((key) => key.uuids || []));
+  const stems = new Set(keys.map((key) => key.stem).filter(Boolean));
+  const fileNames = new Set(keys.map((key) => key.fileName).filter(Boolean));
+  const paths = new Set(keys.map((key) => key.path).filter(Boolean));
+
+  const scored = currentImageLibrary.files.map((file) => {
+    const relativePath = currentImageLibrary.filePaths.get(file) || file.name;
+    const normalizedPath = normalizeLookupKey(relativePath);
+    const fileName = normalizeLookupKey(file.name);
+    const stem = getStem(file.name);
+    const pathUuids = extractUuids(relativePath);
+    let score = 0;
+
+    if (paths.has(normalizedPath)) score += 100;
+    if (fileNames.has(fileName)) score += 80;
+    if (stems.has(stem)) score += 60;
+    if ([...uuids].some((uuid) => pathUuids.includes(uuid))) score += 50;
+    if ([...stems].some((candidateStem) => candidateStem && stem.includes(candidateStem))) score += 20;
+    if ([...fileNames].some((candidateName) => candidateName && normalizedPath.includes(candidateName))) score += 15;
+
+    return { file, relativePath, score };
+  });
+
+  const nearby = scored
+    .filter((candidate) => candidate.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, limit);
+
+  if (nearby.length > 0) return nearby;
+
+  return currentImageLibrary.samples.slice(0, limit).map((sample) => ({
+    file: null,
+    relativePath: sample.relativePath,
+    score: 0
+  }));
+}
+
+function findImageFilesForAttachment(attachment) {
+  return getImageMatchDebug(attachment).files;
+}
+
+function setImageLibrary(library) {
+  cleanupImageLibrary(currentImageLibrary);
+  currentImageLibrary = library || createEmptyImageLibrary();
 }
 
 function showMessage(text, type = "") {
@@ -289,6 +892,236 @@ function getConversationWeight(charCount) {
   return { level: "light", label: "軽い" };
 }
 
+function summarizeAttachments(messages) {
+  return messages.reduce((total, item) => {
+    total.images += item.attachments.filter((attachment) => attachment.type === "image").length;
+    total.files += item.attachments.filter((attachment) => attachment.type === "file").length;
+    return total;
+  }, { images: 0, files: 0 });
+}
+
+function formatAttachmentSummary(attachments) {
+  const parts = [];
+
+  if (attachments.images > 0) {
+    parts.push(`画像 ${attachments.images.toLocaleString()}件`);
+  }
+
+  if (attachments.files > 0) {
+    parts.push(`ファイル ${attachments.files.toLocaleString()}件`);
+  }
+
+  return parts.join(" / ");
+}
+
+function getMessageSearchText(item) {
+  if (item.excludeFromSearch) return "";
+
+  const placeholders = item.attachments
+    .map((attachment) => attachment.type === "image" ? "[Image]" : "[File]")
+    .join(" ");
+
+  return [item.text, placeholders].filter(Boolean).join("\n");
+}
+
+function isHiddenRoleMessage(item) {
+  return item.role === "assistant" || item.role === "tool";
+}
+
+function shouldDisplayConversationItem(item) {
+  return item.role === "user";
+}
+
+function createHiddenMessageDivider(count) {
+  const divider = document.createElement("div");
+  divider.className = "hiddenMessageDivider";
+
+  const label = document.createElement("span");
+  label.className = "hiddenMessageDividerText";
+  label.textContent = count > 0
+    ? `assistant/tool 非表示: ${count.toLocaleString()}件`
+    : "assistant/tool 非表示";
+
+  divider.appendChild(label);
+  return divider;
+}
+
+function formatConversationDebugStats(stats) {
+  if (!stats) return "";
+
+  return [
+    `総メッセージ数: ${stats.totalMessages.toLocaleString()}`,
+    `user: ${stats.userMessages.toLocaleString()}`,
+    `assistant: ${stats.assistantMessages.toLocaleString()}`,
+    `assistant画像検出: ${stats.assistantImagesDetected.toLocaleString()}`,
+    `直前userへ移動: ${stats.assistantImagesMovedToUser.toLocaleString()}`,
+    `tool: ${stats.toolMessages.toLocaleString()}`,
+    `非表示assistant/tool: ${stats.hiddenAssistantToolMessages.toLocaleString()}`
+  ].join(" / ");
+}
+
+function appendDebugPre(target, title, value) {
+  const heading = document.createElement("strong");
+  heading.textContent = title;
+  target.appendChild(heading);
+
+  const pre = document.createElement("pre");
+  pre.textContent = typeof value === "string"
+    ? value
+    : JSON.stringify(value, null, 2);
+  target.appendChild(pre);
+}
+
+function createAttachmentDebugDetails(attachment, matchDebug) {
+  const details = document.createElement("details");
+  details.className = "attachmentDebug";
+
+  const summary = document.createElement("summary");
+  summary.textContent = attachment.type === "image" ? "[Image] デバッグ情報" : "[File] デバッグ情報";
+  details.appendChild(summary);
+
+  const panel = document.createElement("div");
+  panel.className = "attachmentDebugPanel";
+
+  const matchedFiles = matchDebug.files.map((file) => {
+    const generatedUrl = getObjectUrlForFile(file);
+    return {
+      file_name: file.name,
+      local_path: currentImageLibrary.filePaths.get(file) || file.name,
+      mime_type: file.type || "",
+      size: file.size,
+      generated_url: generatedUrl
+    };
+  });
+  const nearbyCandidates = getNearbyImageCandidates(attachment).map((candidate) => ({
+    file_name: candidate.file ? candidate.file.name : getBaseName(candidate.relativePath),
+    local_path: candidate.relativePath,
+    score: candidate.score,
+    mime_type: candidate.file ? candidate.file.type || "" : "",
+    generated_url: candidate.file ? getObjectUrlForFile(candidate.file) : ""
+  }));
+
+  appendDebugPre(panel, "JSON内の画像参照オブジェクト", attachment.sourceObject || {});
+  appendDebugPre(panel, "参照フィールド", {
+    asset_pointer: attachment.debug.asset_pointer,
+    file_id: attachment.debug.file_id,
+    file_name: attachment.debug.file_name,
+    mime_type: attachment.debug.mime_type
+  });
+  appendDebugPre(panel, "画像照合に使ったキー", attachment.debug.matchKeys);
+  appendDebugPre(panel, "照合結果", {
+    matched: matchDebug.files.length > 0,
+    attempts: matchDebug.attempts,
+    matched_files: matchedFiles
+  });
+  appendDebugPre(panel, "ローカル画像候補のうち近そうなもの", nearbyCandidates);
+  appendDebugPre(panel, "生成した画像URL", matchedFiles.map((file) => file.generated_url).filter(Boolean));
+
+  details.appendChild(panel);
+  return details;
+}
+
+function getImageDisplayKey(file) {
+  const localPath = currentImageLibrary.filePaths.get(file);
+  return localPath ? `path:${localPath}` : `url:${getObjectUrlForFile(file)}`;
+}
+
+function appendAttachmentPlaceholders(target, attachments) {
+  if (attachments.length === 0) return;
+
+  const wrapper = document.createElement("div");
+  wrapper.className = "attachmentPlaceholders";
+  const seenImageKeys = new Set();
+  const userImageKeys = new Set();
+  const hadAssistant = attachments.some((attachment) => attachment.source === "assistant");
+
+  if (hadAssistant) {
+    const label = document.createElement("span");
+    label.className = "attachmentSourceLabel";
+    label.textContent = "assistant生成";
+    wrapper.appendChild(label);
+  }
+
+  for (const attachment of attachments) {
+    if (attachment.type !== "image" || attachment.source === "assistant") continue;
+
+    const imageFile = getImageMatchDebug(attachment).files[0];
+    if (imageFile) {
+      userImageKeys.add(getImageDisplayKey(imageFile));
+    }
+  }
+
+  for (const attachment of attachments) {
+    const matchDebug = getImageMatchDebug(attachment);
+    const imageFiles = matchDebug.files;
+
+    if (imageFiles.length > 0) {
+      const imageFile = imageFiles[0];
+      const imageKey = getImageDisplayKey(imageFile);
+      if (seenImageKeys.has(imageKey) ||
+          (attachment.source === "assistant" && userImageKeys.has(imageKey))) {
+        continue;
+      }
+
+      seenImageKeys.add(imageKey);
+      const thumbnailButton = document.createElement("button");
+      thumbnailButton.type = "button";
+      thumbnailButton.className = "attachmentThumbnailButton";
+      thumbnailButton.title = attachment.name || imageFile.name;
+
+      const thumbnail = document.createElement("img");
+      thumbnail.className = "attachmentThumbnail";
+      thumbnail.loading = "lazy";
+      thumbnail.alt = attachment.name || imageFile.name || "[Image]";
+      thumbnail.src = getObjectUrlForFile(imageFile);
+
+      thumbnailButton.appendChild(thumbnail);
+      thumbnailButton.addEventListener("click", () => openImageLightbox(imageFile, thumbnail.alt));
+      wrapper.appendChild(thumbnailButton);
+      continue;
+    }
+
+    const placeholder = document.createElement("span");
+    placeholder.className = "attachmentPlaceholder";
+    placeholder.textContent = attachment.type === "image" ? "[Image]" : "[File]";
+    if (attachment.name) {
+      placeholder.title = attachment.name;
+    }
+    wrapper.appendChild(placeholder);
+    if (attachment.type === "image") {
+      wrapper.appendChild(createAttachmentDebugDetails(attachment, matchDebug));
+    }
+  }
+
+  target.appendChild(wrapper);
+}
+
+function openImageLightbox(file, altText) {
+  imageLightboxImage.src = getObjectUrlForFile(file);
+  imageLightboxImage.alt = altText || file.name || "";
+  imageLightboxCaption.textContent = file.name || altText || "";
+  imageLightbox.hidden = false;
+}
+
+function closeImageLightbox() {
+  imageLightbox.hidden = true;
+  imageLightboxImage.removeAttribute("src");
+  imageLightboxImage.alt = "";
+  imageLightboxCaption.textContent = "";
+}
+
+closeLightbox.addEventListener("click", closeImageLightbox);
+imageLightbox.addEventListener("click", (event) => {
+  if (event.target === imageLightbox) {
+    closeImageLightbox();
+  }
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && !imageLightbox.hidden) {
+    closeImageLightbox();
+  }
+});
+
 function getConversationMeta(convo) {
   if (searchCache.has(convo)) return searchCache.get(convo);
 
@@ -298,7 +1131,8 @@ function getConversationMeta(convo) {
     : "日時不明";
   const label = `${time}  ${title}`;
   const messages = getConversationMessages(convo);
-  const charCount = messages.reduce((total, item) => total + item.text.length, 0);
+  const charCount = messages.reduce((total, item) => total + getMessageSearchText(item).length, 0);
+  const attachments = summarizeAttachments(messages);
   const weight = getConversationWeight(charCount);
   const meta = {
     title,
@@ -306,6 +1140,7 @@ function getConversationMeta(convo) {
     label,
     messageCount: messages.length,
     charCount,
+    attachments,
     weight,
     weightRatio: Math.min(charCount / conversationWeightThresholds.heavyChars, 1),
     searchable: normalize(label)
@@ -315,26 +1150,411 @@ function getConversationMeta(convo) {
   return meta;
 }
 
+function isPlainObject(value) {
+  return value && typeof value === "object" && !Array.isArray(value);
+}
+
+function getFileName(value) {
+  if (!isPlainObject(value)) return "";
+
+  return value.name ||
+    value.filename ||
+    value.file_name ||
+    value.path ||
+    value.url ||
+    value.title ||
+    value.display_name ||
+    "";
+}
+
+function getAttachmentCandidates(value) {
+  if (!isPlainObject(value)) return [];
+
+  const id = value.id || "";
+  const fileName = getFileName(value);
+  const idNameCandidates = id && fileName
+    ? [
+        `${id}-${fileName}`,
+        `${id}-${getStem(fileName)}`,
+        id
+      ]
+    : [];
+  const explicitCandidates = [
+    ...idNameCandidates,
+    value.asset_pointer,
+    value.assetPointer,
+    value.asset_id,
+    value.assetId,
+    value.asset_url,
+    value.assetUrl,
+    value.image_asset_pointer,
+    value.imageAssetPointer,
+    value.file_id,
+    value.fileId,
+    value.image_id,
+    value.imageId,
+    value.referenced_image_id,
+    value.referencedImageId,
+    value.referenced_image_ids,
+    value.referencedImageIds,
+    value.download_url,
+    value.downloadUrl,
+    value.path,
+    value.url,
+    fileName
+  ];
+  const discoveredCandidates = [];
+
+  for (const [key, candidate] of Object.entries(value)) {
+    if (!/(asset|image|file|reference|pointer)/i.test(key)) continue;
+
+    if (typeof candidate === "string" || typeof candidate === "number") {
+      discoveredCandidates.push(candidate);
+    } else if (Array.isArray(candidate)) {
+      discoveredCandidates.push(...candidate.filter((item) => typeof item === "string" || typeof item === "number"));
+    }
+  }
+
+  return [...explicitCandidates, ...discoveredCandidates]
+    .flat()
+    .filter(Boolean)
+    .map(String);
+}
+
+function getAttachmentDebugInfo(value, candidates) {
+  if (!isPlainObject(value)) {
+    return {
+      asset_pointer: "",
+      file_id: "",
+      file_name: "",
+      mime_type: "",
+      matchKeys: []
+    };
+  }
+
+  return {
+    asset_pointer: value.asset_pointer || value.assetPointer || "",
+    file_id: value.file_id || value.fileId || "",
+    image_id: value.image_id || value.imageId || value.referenced_image_id || value.referencedImageId || "",
+    file_name: value.file_name || value.filename || value.name || "",
+    mime_type: value.mime_type || value.mimeType || value.content_type || value.contentType || "",
+    matchKeys: candidates.map((candidate) => ({
+      original: candidate,
+      path: normalizeLookupKey(candidate),
+      fileName: getBaseName(candidate),
+      stem: getStem(candidate),
+      uuids: extractUuids(candidate)
+    }))
+  };
+}
+
+function hasImageSignal(value) {
+  if (!isPlainObject(value)) return false;
+
+  const mimeType = String(value.mime_type || value.mimeType || value.content_type || value.contentType || "");
+  const assetPointer = String(value.asset_pointer || value.assetPointer || value.image_asset_pointer || value.imageAssetPointer || "");
+  const fileName = getFileName(value);
+  const candidates = getAttachmentCandidates(value);
+
+  return mimeType.startsWith("image/") ||
+    assetPointer.startsWith("file-service://") ||
+    isImageFileName(fileName) ||
+    candidates.some((candidate) => String(candidate).startsWith("file-service://")) ||
+    candidates.some((candidate) => extractUuids(candidate).length > 0);
+}
+
+function hasFileSignal(value) {
+  if (!isPlainObject(value)) return false;
+
+  return Boolean(
+    value.file_id ||
+    value.fileId ||
+    value.file_name ||
+    value.filename ||
+    value.mime_type ||
+    value.mimeType ||
+    value.asset_pointer ||
+    value.assetPointer ||
+    value.download_url ||
+    value.downloadUrl
+  );
+}
+
+function addAttachment(attachments, type, source) {
+  const candidates = getAttachmentCandidates(source);
+
+  attachments.push({
+    type,
+    name: getFileName(source),
+    signature: source && typeof source === "object"
+      ? source.asset_pointer ||
+        source.assetPointer ||
+        source.file_id ||
+        source.fileId ||
+        source.image_id ||
+        source.imageId ||
+        source.referenced_image_id ||
+        source.referencedImageId ||
+        source.download_url ||
+        source.downloadUrl ||
+        getFileName(source)
+      : "",
+    candidates,
+    source: "",
+    sourceObject: isPlainObject(source) ? source : null,
+    debug: getAttachmentDebugInfo(source, candidates)
+  });
+}
+
+function collectAttachments(value, attachments = []) {
+  if (Array.isArray(value)) {
+    value.forEach((item) => collectAttachments(item, attachments));
+    return attachments;
+  }
+
+  if (!isPlainObject(value)) return attachments;
+
+  if (Array.isArray(value.attachments)) {
+    value.attachments.forEach((attachment) => {
+      addAttachment(attachments, hasImageSignal(attachment) ? "image" : "file", attachment);
+    });
+  }
+
+  if (hasImageSignal(value)) {
+    addAttachment(attachments, "image", value);
+  } else if (hasFileSignal(value)) {
+    addAttachment(attachments, "file", value);
+  }
+
+  for (const [key, child] of Object.entries(value)) {
+    if (key === "attachments") continue;
+    if (child && typeof child === "object") {
+      collectAttachments(child, attachments);
+    }
+  }
+
+  return attachments;
+}
+
+function dedupeAttachments(attachments) {
+  const seen = new Set();
+
+  return attachments.filter((attachment) => {
+    if (!attachment.signature) return true;
+
+    const key = `${attachment.type}:${attachment.signature}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function isImageGenerationRequestPart(value) {
+  if (!isPlainObject(value)) return false;
+  if (!Object.prototype.hasOwnProperty.call(value, "prompt") &&
+      !Object.prototype.hasOwnProperty.call(value, "size")) {
+    return false;
+  }
+
+  const imageGenerationKeys = new Set([
+    "background",
+    "input_fidelity",
+    "input_image",
+    "input_images",
+    "model",
+    "moderation",
+    "n",
+    "output_compression",
+    "output_format",
+    "prompt",
+    "quality",
+    "referenced_image_id",
+    "referenced_image_ids",
+    "response_format",
+    "size",
+    "style",
+    "transparent_background",
+    "user"
+  ]);
+
+  return Object.keys(value).every((key) => imageGenerationKeys.has(key));
+}
+
+function parseJsonObjectText(text) {
+  const trimmed = text.trim();
+  if (!trimmed) return null;
+
+  const fence = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
+  const source = fence ? fence[1].trim() : trimmed;
+  if (!source.startsWith("{") || !source.endsWith("}")) return null;
+
+  try {
+    const value = JSON.parse(source);
+    return isPlainObject(value) ? value : null;
+  } catch {
+    return null;
+  }
+}
+
+function isImageGenerationRequestText(text) {
+  const value = parseJsonObjectText(text);
+  return value ? isImageGenerationRequestPart(value) : false;
+}
+
+function isImageGenerationRequestParts(parts) {
+  if (!Array.isArray(parts) || parts.length === 0) return false;
+
+  const structuredParts = parts.filter((part) => isPlainObject(part));
+  const hasVisibleText = parts.some((part) => typeof part === "string" && part.trim());
+
+  return !hasVisibleText &&
+    structuredParts.length > 0 &&
+    structuredParts.every((part) => isImageGenerationRequestPart(part));
+}
+
+function debugImageAttachments(context, attachments) {
+  if (!debugImageMatching) return;
+
+  attachments
+    .filter((attachment) => attachment.type === "image")
+    .forEach((attachment, index) => {
+      const matchDebug = getImageMatchDebug(attachment);
+      console.groupCollapsed(
+        `[chatgpt-json-viewer] image ref ${context.key} #${index + 1}: ${matchDebug.files.length} match(es)`
+      );
+      console.log("message", context);
+      console.log("reference", attachment.debug);
+      console.table(matchDebug.attempts);
+      if (matchDebug.files.length > 0) {
+        const matchedAttempts = matchDebug.attempts.filter((attempt) => attempt.matched);
+        console.log("matched keys", matchedAttempts.map((attempt) => ({
+          kind: attempt.kind,
+          key: attempt.key
+        })));
+        console.log("matched file paths", matchDebug.files.map((file) => currentImageLibrary.filePaths.get(file) || file.name));
+      } else {
+        console.warn("no image file matched for this reference");
+      }
+      console.groupEnd();
+    });
+}
+
 function getConversationMessages(convo) {
   if (messageCache.has(convo)) return messageCache.get(convo);
 
   const messages = convo.mapping || {};
   const items = [];
+  let lastUserItem = null;
+  let lastAssistantImageFolder = "";
+  const usedImageKeys = new Set();
+  let loggedFirstAssistantImage = false;
+  const debugStats = {
+    totalMessages: 0,
+    userMessages: 0,
+    assistantMessages: 0,
+    assistantImagesDetected: 0,
+    assistantImagesMovedToUser: 0,
+    toolMessages: 0,
+    hiddenAssistantToolMessages: 0
+  };
 
   for (const key in messages) {
     const msg = messages[key].message;
     if (!msg || !msg.content) continue;
 
-    const parts = msg.content.parts || [];
-    const text = parts.join("").trim();
-    if (!text) continue;
+    debugStats.totalMessages++;
+    const role = msg.author && msg.author.role ? msg.author.role : "unknown";
+    if (role === "user") debugStats.userMessages++;
+    if (role === "assistant") debugStats.assistantMessages++;
+    if (role === "tool") debugStats.toolMessages++;
 
-    items.push({
-      role: msg.author && msg.author.role ? msg.author.role : "unknown",
-      text
-    });
+    const parts = msg.content.parts || [];
+    const text = parts
+      .map((part) => typeof part === "string" ? part : "")
+      .join("")
+      .trim();
+    const attachments = dedupeAttachments(collectAttachments(msg));
+    const isToolMessage = role === "tool";
+    const isImageGenerationRequest = role === "assistant" &&
+      (isImageGenerationRequestParts(parts) || isImageGenerationRequestText(text));
+    debugImageAttachments({ key, role, isToolMessage, isImageGenerationRequest }, attachments);
+
+    if (isToolMessage) {
+      debugStats.hiddenAssistantToolMessages++;
+      continue;
+    }
+
+    if (role === "assistant") {
+      debugStats.hiddenAssistantToolMessages++;
+      const imageAttachments = attachments.filter((attachment) => attachment.type === "image");
+      debugStats.assistantImagesDetected += imageAttachments.length;
+
+      if (!loggedFirstAssistantImage && imageAttachments.length > 0) {
+        loggedFirstAssistantImage = true;
+        console.groupCollapsed("[chatgpt-json-viewer] first assistant image attachment");
+        console.log("message key", key);
+        console.log("message", msg);
+        console.log("image attachments", imageAttachments);
+        console.groupEnd();
+      }
+
+      if (lastUserItem && imageAttachments.length > 0) {
+        const movedAttachments = imageAttachments.map((attachment) => {
+          const existingFile = getImageMatchDebug(attachment).files[0] || null;
+          const fallbackFile = existingFile
+            ? null
+            : getUnusedUserFolderImage(usedImageKeys, lastAssistantImageFolder);
+          const assignedFile = existingFile || fallbackFile;
+
+          if (assignedFile) {
+            usedImageKeys.add(getImageAssignmentKey(assignedFile));
+            const assignedFolder = getUserFolderPath(currentImageLibrary.filePaths.get(assignedFile) || assignedFile.name);
+            if (assignedFolder) {
+              lastAssistantImageFolder = assignedFolder;
+            }
+          }
+
+          return {
+            ...attachment,
+            source: "assistant",
+            fallbackFile
+          };
+        });
+        lastUserItem.attachments.push(...movedAttachments);
+        debugStats.assistantImagesMovedToUser += imageAttachments.length;
+      }
+
+      if (!text && imageAttachments.length === 0) continue;
+
+      items.push({
+        role,
+        text: "",
+        attachments: [],
+        hideRole: true,
+        excludeFromSearch: true
+      });
+      continue;
+    }
+
+    if (!text && attachments.length === 0) continue;
+
+    const item = {
+      role,
+      text,
+      attachments,
+      hideRole: false,
+      excludeFromSearch: false
+    };
+    items.push(item);
+
+    if (role === "user") {
+      lastUserItem = item;
+      markMatchedImagesUsed(attachments, usedImageKeys);
+    }
   }
 
+  console.info("[chatgpt-json-viewer] conversation debug stats", debugStats);
+  messageDebugCache.set(convo, debugStats);
   messageCache.set(convo, items);
   return items;
 }
@@ -372,6 +1592,150 @@ function createSearchControls(placeholder, onInput, onReset) {
   return { toolbar, search, reset };
 }
 
+function appendViewTabs(data, activeView) {
+  const tabs = document.createElement("div");
+  tabs.className = "viewTabs";
+
+  const chatTab = document.createElement("button");
+  chatTab.type = "button";
+  chatTab.className = activeView === "chat" ? "viewTab isActive" : "viewTab";
+  chatTab.textContent = "チャットビュー";
+  chatTab.onclick = () => showList(data);
+
+  const imageTab = document.createElement("button");
+  imageTab.type = "button";
+  imageTab.className = activeView === "images" ? "viewTab isActive" : "viewTab";
+  imageTab.textContent = "画像ビュー";
+  imageTab.onclick = () => showImageView(data);
+
+  tabs.appendChild(chatTab);
+  tabs.appendChild(imageTab);
+  result.appendChild(tabs);
+}
+
+function getImageViewKind(file) {
+  const path = currentImageLibrary.filePaths.get(file) || file.name;
+  const name = file.name;
+  const pathParts = String(path).split(/[\\/]/).filter(Boolean);
+
+  if (pathParts.slice(0, -1).some((part) => /^user-/i.test(part))) return "assistant";
+  if (pathParts.length === 1) return "user";
+  if (/^file_/i.test(name)) return "assistant";
+  if (/^file-/i.test(name)) return "user";
+
+  return "user";
+}
+
+function createImageTile(file) {
+  const tile = document.createElement("div");
+  tile.className = "imageTile";
+
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "attachmentThumbnailButton";
+  button.title = file.name;
+
+  const thumbnail = document.createElement("img");
+  thumbnail.className = "attachmentThumbnail";
+  thumbnail.loading = "lazy";
+  thumbnail.alt = file.name;
+  thumbnail.src = getObjectUrlForFile(file);
+
+  button.appendChild(thumbnail);
+  button.addEventListener("click", () => openImageLightbox(file, file.name));
+
+  const name = document.createElement("div");
+  name.className = "imageTileName";
+  name.textContent = file.name;
+
+  tile.appendChild(button);
+  tile.appendChild(name);
+  return tile;
+}
+
+function appendRenderedImageSection(target, title, files) {
+  const header = document.createElement("h3");
+  header.textContent = `${title} (${files.length.toLocaleString()}件)`;
+  target.appendChild(header);
+
+  if (files.length === 0) {
+    const empty = document.createElement("div");
+    empty.className = "message";
+    empty.textContent = "画像がありません。";
+    target.appendChild(empty);
+    return;
+  }
+
+  const grid = document.createElement("div");
+  grid.className = "imageGrid";
+  files.forEach((file) => grid.appendChild(createImageTile(file)));
+  target.appendChild(grid);
+}
+
+function showImageView(data) {
+  result.innerHTML = "";
+  appendViewTabs(data, "images");
+
+  const header = document.createElement("h3");
+  header.textContent = "画像一覧";
+  result.appendChild(header);
+
+  const files = [...currentImageLibrary.files].sort((a, b) => {
+    const aPath = currentImageLibrary.filePaths.get(a) || a.name;
+    const bPath = currentImageLibrary.filePaths.get(b) || b.name;
+    return aPath.localeCompare(bPath);
+  });
+  const userFiles = files.filter((file) => getImageViewKind(file) === "user");
+  const assistantFiles = files.filter((file) => getImageViewKind(file) === "assistant");
+
+  const count = document.createElement("div");
+  count.className = "count";
+  count.textContent = `ローカル画像 ${files.length.toLocaleString()}件`;
+  result.appendChild(count);
+
+  const filters = document.createElement("div");
+  filters.className = "viewTabs";
+  const body = document.createElement("div");
+  let activeFilter = "all";
+
+  const filterDefs = [
+    { key: "all", label: "すべて" },
+    { key: "user", label: "ユーザー画像" },
+    { key: "assistant", label: "GPT生成画像" }
+  ];
+  const filterButtons = filterDefs.map((filter) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "viewTab";
+    button.textContent = filter.label;
+    button.onclick = () => {
+      activeFilter = filter.key;
+      renderImages();
+    };
+    filters.appendChild(button);
+    return { ...filter, button };
+  });
+
+  const renderImages = () => {
+    filterButtons.forEach((filter) => {
+      filter.button.className = filter.key === activeFilter ? "viewTab isActive" : "viewTab";
+    });
+
+    const fragment = document.createDocumentFragment();
+    if (activeFilter === "all" || activeFilter === "user") {
+      appendRenderedImageSection(fragment, "ユーザー画像", userFiles);
+    }
+    if (activeFilter === "all" || activeFilter === "assistant") {
+      appendRenderedImageSection(fragment, "GPT生成画像", assistantFiles);
+    }
+    body.replaceChildren(fragment);
+  };
+
+  result.appendChild(filters);
+  result.appendChild(body);
+  renderImages();
+}
+
 // conversations.json を再帰的に探す
 async function findConversationsJson(dirHandle) {
   for await (const [name, handle] of dirHandle.entries()) {
@@ -386,7 +1750,50 @@ async function findConversationsJson(dirHandle) {
   return null;
 }
 
-button.addEventListener("click", async () => {
+async function collectImagesFromDirectory(dirHandle, library = createEmptyImageLibrary(), pathPrefix = "") {
+  for await (const [name, handle] of dirHandle.entries()) {
+    const path = pathPrefix ? `${pathPrefix}/${name}` : name;
+
+    if (handle.kind === "file" && isImageFileName(name)) {
+      const file = await handle.getFile();
+      addImageToLibrary(library, file, path);
+    }
+
+    if (handle.kind === "directory") {
+      await collectImagesFromDirectory(handle, library, path);
+    }
+  }
+
+  return library;
+}
+
+async function readConversationData(fileHandle) {
+  const file = await fileHandle.getFile();
+  const text = await file.text();
+  const data = JSON.parse(text);
+
+  if (!isConversationCollection(data)) {
+    throw new Error("invalid-conversations-json");
+  }
+
+  return data;
+}
+
+function showLoadedData(data, imageLibrary = createEmptyImageLibrary()) {
+  closeImageLightbox();
+  setImageLibrary(imageLibrary);
+  if (debugImageMatching) {
+    console.log(`[chatgpt-json-viewer] loaded image files: ${currentImageLibrary.count}`);
+    console.table(currentImageLibrary.samples);
+    console.table([...currentImageLibrary.byUuidFolder.entries()].map(([uuid, files]) => ({
+      uuidFolder: uuid,
+      files: files.map((file) => currentImageLibrary.filePaths.get(file) || file.name).join(", ")
+    })));
+  }
+  showList(data);
+}
+
+fileButton.addEventListener("click", async () => {
   result.textContent = "開始…";
 
   try {
@@ -407,16 +1814,8 @@ button.addEventListener("click", async () => {
       return;
     }
 
-    const file = await fileHandle.getFile();
-    const text = await file.text();
-    const data = JSON.parse(text);
-
-    if (!isConversationCollection(data)) {
-      showMessage("会話データの形式が想定と違います。conversations.json を選んでください。", "error");
-      return;
-    }
-
-    showList(data);
+    const data = await readConversationData(fileHandle);
+    showLoadedData(data);
 
   } catch (e) {
     if (isAbortError(e)) {
@@ -428,13 +1827,60 @@ button.addEventListener("click", async () => {
   }
 });
 
+folderButton.addEventListener("click", async () => {
+  result.textContent = "エクスポートフォルダを読み込んでいます…";
+
+  try {
+    if (!window.showDirectoryPicker) {
+      showMessage("このブラウザはフォルダ選択に対応していません。Chrome または Edge で開いてください。", "error");
+      return;
+    }
+
+    const dirHandle = await window.showDirectoryPicker();
+    const conversationsHandle = await findConversationsJson(dirHandle);
+
+    if (!conversationsHandle) {
+      showMessage("conversations.json が見つかりませんでした。解凍済みのChatGPTエクスポートフォルダを選んでください。", "error");
+      return;
+    }
+
+    result.textContent = "conversations.json と画像を読み込んでいます…";
+
+    const data = await readConversationData(conversationsHandle);
+    const imageLibrary = await collectImagesFromDirectory(dirHandle);
+    result.textContent = `conversations.json と画像 ${imageLibrary.count.toLocaleString()}件を読み込みました。表示を準備しています…`;
+    showLoadedData(data, imageLibrary);
+
+  } catch (e) {
+    if (isAbortError(e)) {
+      showMessage("フォルダ選択がキャンセルされました。");
+      return;
+    }
+
+    showMessage("エクスポートフォルダを読み込めませんでした。フォルダの内容を確認してください。", "error");
+  }
+});
+
 // 会話一覧表示
 function showList(data) {
   result.innerHTML = "";
+  appendViewTabs(data, "chat");
 
   const header = document.createElement("h3");
   header.textContent = "会話一覧";
   result.appendChild(header);
+
+  if (currentImageLibrary.count > 0) {
+    const imageInfo = document.createElement("div");
+    imageInfo.className = "count";
+    imageInfo.textContent = `ローカル画像 ${currentImageLibrary.count.toLocaleString()}件を読み込み済み`;
+    result.appendChild(imageInfo);
+  } else {
+    const imageInfo = document.createElement("div");
+    imageInfo.className = "count";
+    imageInfo.textContent = "ローカル画像 0件";
+    result.appendChild(imageInfo);
+  }
 
   const count = document.createElement("div");
   count.className = "count";
@@ -519,7 +1965,13 @@ function showList(data) {
 
       const stats = document.createElement("div");
       stats.className = "conversationStats";
-      stats.textContent = `${meta.messageCount.toLocaleString()}件のメッセージ / ${meta.charCount.toLocaleString()}文字 / ${meta.weight.label}`;
+      const attachmentSummary = formatAttachmentSummary(meta.attachments);
+      stats.textContent = [
+        `${meta.messageCount.toLocaleString()}件のメッセージ`,
+        `${meta.charCount.toLocaleString()}文字`,
+        meta.weight.label,
+        attachmentSummary
+      ].filter(Boolean).join(" / ");
 
       const weightBar = document.createElement("div");
       weightBar.className = "weightBar";
@@ -581,8 +2033,12 @@ function showConversation(convo, data) {
   const count = document.createElement("div");
   count.className = "count";
 
+  const debugSummary = document.createElement("div");
+  debugSummary.className = "count";
+
   const conversationBody = document.createElement("div");
   const messages = getConversationMessages(convo);
+  debugSummary.textContent = formatConversationDebugStats(messageDebugCache.get(convo));
   const controls = createSearchControls(
     "この会話の本文を検索",
     () => render(),
@@ -590,6 +2046,7 @@ function showConversation(convo, data) {
   );
 
   result.appendChild(controls.toolbar);
+  result.appendChild(debugSummary);
   result.appendChild(count);
   result.appendChild(conversationBody);
 
@@ -598,14 +2055,30 @@ function showConversation(convo, data) {
     const fragment = document.createDocumentFragment();
     let hitMessages = 0;
     let hits = 0;
+    let displayedMessages = 0;
+    let hiddenSinceLastDisplay = 0;
 
     for (const item of messages) {
-      const matchCount = countMatches(item.text, query);
+      if (!shouldDisplayConversationItem(item)) {
+        if (isHiddenRoleMessage(item)) {
+          hiddenSinceLastDisplay++;
+        }
+        continue;
+      }
+
+      const searchableText = getMessageSearchText(item);
+      const matchCount = countMatches(searchableText, query);
 
       if (query && matchCount === 0) continue;
 
+      if (!query && displayedMessages > 0 && hiddenSinceLastDisplay > 0) {
+        fragment.appendChild(createHiddenMessageDivider(hiddenSinceLastDisplay));
+      }
+      hiddenSinceLastDisplay = 0;
+
       if (matchCount > 0) hitMessages++;
       hits += matchCount;
+      displayedMessages++;
 
       const block = document.createElement("div");
       block.className = `entry ${item.role}`;
@@ -615,18 +2088,26 @@ function showConversation(convo, data) {
       who.textContent = item.role;
 
       const body = document.createElement("div");
-      appendHighlightedText(body, item.text, query);
+      if (item.text) {
+        appendHighlightedText(body, item.text, query);
+      }
+      appendAttachmentPlaceholders(body, item.attachments);
 
-      block.appendChild(who);
+      if (!item.hideRole) {
+        block.appendChild(who);
+      }
       block.appendChild(body);
       fragment.appendChild(block);
     }
 
     count.textContent = query
       ? `${hitMessages}件のメッセージ / 一致箇所 ${hits}件`
-      : `${messages.length}件のメッセージ`;
+      : [
+          `${displayedMessages}件のメッセージ`,
+          formatAttachmentSummary(summarizeAttachments(messages))
+        ].filter(Boolean).join(" / ");
 
-    if (!query && messages.length === 0) {
+    if (!query && displayedMessages === 0) {
       const empty = document.createElement("div");
       empty.className = "message";
       empty.textContent = "表示できる本文がありません。";

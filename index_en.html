@@ -131,6 +131,123 @@
       font-size: 0.85em;
     }
 
+    .viewTabs {
+      margin: 12px 0;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .viewTab {
+      margin: 0;
+    }
+
+    .viewTab.isActive {
+      background: #fff1a8;
+      border-color: #d8b84c;
+      color: #4f3b00;
+    }
+
+    .imageGrid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 14px;
+      margin: 12px 0 26px;
+    }
+
+    .imageTile {
+      position: relative;
+      min-width: 0;
+    }
+
+    .imageTileName {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 2;
+      max-height: 55%;
+      overflow: hidden;
+      padding: 6px 8px;
+      border-radius: 0 0 8px 8px;
+      background: rgba(0, 0, 0, 0.68);
+      color: #ffffff;
+      font-size: 0.82em;
+      line-height: 1.35;
+      opacity: 0;
+      overflow-wrap: anywhere;
+      pointer-events: none;
+      transition: opacity 120ms ease;
+    }
+
+    .imageTile:hover .imageTileName,
+    .imageTile:focus-within .imageTileName {
+      opacity: 1;
+    }
+
+    .attachmentThumbnailButton {
+      margin: 0;
+      padding: 0;
+      border: 1px solid #c9c4bb;
+      border-radius: 8px;
+      background: #fff;
+      overflow: hidden;
+      line-height: 0;
+      cursor: pointer;
+    }
+
+    .attachmentThumbnail {
+      display: block;
+      width: 160px;
+      max-width: 100%;
+      height: 120px;
+      object-fit: cover;
+    }
+
+    .imageLightbox {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 28px;
+      background: rgba(0, 0, 0, 0.72);
+    }
+
+    .imageLightbox[hidden] {
+      display: none;
+    }
+
+    .imageLightboxImage {
+      max-width: min(100%, 1100px);
+      max-height: 84vh;
+      border-radius: 8px;
+      background: #ffffff;
+      object-fit: contain;
+    }
+
+    .imageLightboxCaption {
+      max-width: min(100%, 1100px);
+      margin-top: 10px;
+      color: #ffffff;
+      font-size: 0.9em;
+      line-height: 1.4;
+      overflow-wrap: anywhere;
+      text-align: center;
+    }
+
+    .imageLightboxClose {
+      position: fixed;
+      top: 18px;
+      right: 18px;
+      margin: 0;
+      color: #ffffff;
+      border-color: rgba(255, 255, 255, 0.35);
+      background: rgba(0, 0, 0, 0.35);
+    }
+
     .weightBar {
       width: min(220px, 100%);
       height: 4px;
@@ -170,14 +287,27 @@
 
 <h1>Backup Viewer</h1>
 <button id="selectFolder">Choose Backup File</button>
+<button id="selectExportFolder">Choose Export Folder</button>
 
 <div id="result"></div>
 
+<div id="imageLightbox" class="imageLightbox" hidden>
+  <button id="closeLightbox" class="imageLightboxClose" type="button">Close</button>
+  <img id="imageLightboxImage" class="imageLightboxImage" alt="">
+  <div id="imageLightboxCaption" class="imageLightboxCaption"></div>
+</div>
+
 <script>
 const button = document.getElementById("selectFolder");
+const folderButton = document.getElementById("selectExportFolder");
 const result = document.getElementById("result");
+const imageLightbox = document.getElementById("imageLightbox");
+const imageLightboxImage = document.getElementById("imageLightboxImage");
+const imageLightboxCaption = document.getElementById("imageLightboxCaption");
+const closeLightbox = document.getElementById("closeLightbox");
 const searchCache = new WeakMap();
 const messageCache = new WeakMap();
+let currentImageLibrary = createEmptyImageLibrary();
 const pinnedStorageKey = "chatgpt-json-viewer:pinned-conversations";
 const conversationWeightThresholds = {
   mediumChars: 10000,
@@ -208,6 +338,98 @@ function debounce(fn, wait = 180) {
 function normalize(value) {
   return String(value || "").toLocaleLowerCase();
 }
+
+function normalizeLookupKey(value) {
+  return normalize(value)
+    .replace(/^file-service:\/\//, "")
+    .replace(/^sandbox:\//, "")
+    .replace(/[?#].*$/, "")
+    .replace(/^\/+/, "");
+}
+
+function getBaseName(value) {
+  return normalizeLookupKey(value).split(/[\\/]/).filter(Boolean).pop() || "";
+}
+
+function getStem(value) {
+  return getBaseName(value).replace(/\.[^.]+$/, "");
+}
+
+function isImageFileName(name) {
+  return /\.(gif|jpe?g|png|webp)$/i.test(name);
+}
+
+function createEmptyImageLibrary() {
+  return {
+    filePaths: new Map(),
+    files: [],
+    records: [],
+    urls: new Map(),
+    count: 0
+  };
+}
+
+function cleanupImageLibrary(library) {
+  if (!library) return;
+
+  for (const url of library.urls.values()) {
+    URL.revokeObjectURL(url);
+  }
+}
+
+function addImageToLibrary(library, file, path) {
+  const stem = getStem(file.name);
+
+  library.filePaths.set(file, path);
+  library.files.push(file);
+  library.records.push({
+    fileName: file.name,
+    stem,
+    relativePath: path
+  });
+  library.count++;
+}
+
+function getObjectUrlForFile(file) {
+  if (!file) return "";
+
+  if (!currentImageLibrary.urls.has(file)) {
+    currentImageLibrary.urls.set(file, URL.createObjectURL(file));
+  }
+
+  return currentImageLibrary.urls.get(file);
+}
+
+function setImageLibrary(library) {
+  cleanupImageLibrary(currentImageLibrary);
+  currentImageLibrary = library || createEmptyImageLibrary();
+}
+
+function openImageLightbox(file, altText) {
+  imageLightboxImage.src = getObjectUrlForFile(file);
+  imageLightboxImage.alt = altText || file.name || "";
+  imageLightboxCaption.textContent = file.name || altText || "";
+  imageLightbox.hidden = false;
+}
+
+function closeImageLightbox() {
+  imageLightbox.hidden = true;
+  imageLightboxImage.removeAttribute("src");
+  imageLightboxImage.alt = "";
+  imageLightboxCaption.textContent = "";
+}
+
+closeLightbox.addEventListener("click", closeImageLightbox);
+imageLightbox.addEventListener("click", (event) => {
+  if (event.target === imageLightbox) {
+    closeImageLightbox();
+  }
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && !imageLightbox.hidden) {
+    closeImageLightbox();
+  }
+});
 
 function showMessage(text, type = "") {
   result.innerHTML = "";
@@ -372,6 +594,150 @@ function createSearchControls(placeholder, onInput, onReset) {
   return { toolbar, search, reset };
 }
 
+function appendViewTabs(data, activeView) {
+  const tabs = document.createElement("div");
+  tabs.className = "viewTabs";
+
+  const chatTab = document.createElement("button");
+  chatTab.type = "button";
+  chatTab.className = activeView === "chat" ? "viewTab isActive" : "viewTab";
+  chatTab.textContent = "Chat view";
+  chatTab.onclick = () => showList(data);
+
+  const imageTab = document.createElement("button");
+  imageTab.type = "button";
+  imageTab.className = activeView === "images" ? "viewTab isActive" : "viewTab";
+  imageTab.textContent = "Image view";
+  imageTab.onclick = () => showImageView(data);
+
+  tabs.appendChild(chatTab);
+  tabs.appendChild(imageTab);
+  result.appendChild(tabs);
+}
+
+function getImageViewKind(file) {
+  const path = currentImageLibrary.filePaths.get(file) || file.name;
+  const name = file.name;
+  const pathParts = String(path).split(/[\\/]/).filter(Boolean);
+
+  if (pathParts.slice(0, -1).some((part) => /^user-/i.test(part))) return "assistant";
+  if (pathParts.length === 1) return "user";
+  if (/^file_/i.test(name)) return "assistant";
+  if (/^file-/i.test(name)) return "user";
+
+  return "user";
+}
+
+function createImageTile(file) {
+  const tile = document.createElement("div");
+  tile.className = "imageTile";
+
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "attachmentThumbnailButton";
+  button.title = file.name;
+
+  const thumbnail = document.createElement("img");
+  thumbnail.className = "attachmentThumbnail";
+  thumbnail.loading = "lazy";
+  thumbnail.alt = file.name;
+  thumbnail.src = getObjectUrlForFile(file);
+
+  button.appendChild(thumbnail);
+  button.addEventListener("click", () => openImageLightbox(file, file.name));
+
+  const name = document.createElement("div");
+  name.className = "imageTileName";
+  name.textContent = file.name;
+
+  tile.appendChild(button);
+  tile.appendChild(name);
+  return tile;
+}
+
+function appendRenderedImageSection(target, title, files) {
+  const header = document.createElement("h3");
+  header.textContent = `${title} (${files.length.toLocaleString()})`;
+  target.appendChild(header);
+
+  if (files.length === 0) {
+    const empty = document.createElement("div");
+    empty.className = "message";
+    empty.textContent = "No images.";
+    target.appendChild(empty);
+    return;
+  }
+
+  const grid = document.createElement("div");
+  grid.className = "imageGrid";
+  files.forEach((file) => grid.appendChild(createImageTile(file)));
+  target.appendChild(grid);
+}
+
+function showImageView(data) {
+  result.innerHTML = "";
+  appendViewTabs(data, "images");
+
+  const header = document.createElement("h3");
+  header.textContent = "Image List";
+  result.appendChild(header);
+
+  const files = [...currentImageLibrary.files].sort((a, b) => {
+    const aPath = currentImageLibrary.filePaths.get(a) || a.name;
+    const bPath = currentImageLibrary.filePaths.get(b) || b.name;
+    return aPath.localeCompare(bPath);
+  });
+  const userFiles = files.filter((file) => getImageViewKind(file) === "user");
+  const assistantFiles = files.filter((file) => getImageViewKind(file) === "assistant");
+
+  const count = document.createElement("div");
+  count.className = "count";
+  count.textContent = `Local images: ${files.length.toLocaleString()}`;
+  result.appendChild(count);
+
+  const filters = document.createElement("div");
+  filters.className = "viewTabs";
+  const body = document.createElement("div");
+  let activeFilter = "all";
+
+  const filterDefs = [
+    { key: "all", label: "All" },
+    { key: "user", label: "User images" },
+    { key: "assistant", label: "GPT-generated images" }
+  ];
+  const filterButtons = filterDefs.map((filter) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "viewTab";
+    button.textContent = filter.label;
+    button.onclick = () => {
+      activeFilter = filter.key;
+      renderImages();
+    };
+    filters.appendChild(button);
+    return { ...filter, button };
+  });
+
+  const renderImages = () => {
+    filterButtons.forEach((filter) => {
+      filter.button.className = filter.key === activeFilter ? "viewTab isActive" : "viewTab";
+    });
+
+    const fragment = document.createDocumentFragment();
+    if (activeFilter === "all" || activeFilter === "user") {
+      appendRenderedImageSection(fragment, "User images", userFiles);
+    }
+    if (activeFilter === "all" || activeFilter === "assistant") {
+      appendRenderedImageSection(fragment, "GPT-generated images", assistantFiles);
+    }
+    body.replaceChildren(fragment);
+  };
+
+  result.appendChild(filters);
+  result.appendChild(body);
+  renderImages();
+}
+
 // Recursively find conversations.json
 async function findConversationsJson(dirHandle) {
   for await (const [name, handle] of dirHandle.entries()) {
@@ -384,6 +750,41 @@ async function findConversationsJson(dirHandle) {
     }
   }
   return null;
+}
+
+async function collectImagesFromDirectory(dirHandle, library = createEmptyImageLibrary(), pathPrefix = "") {
+  for await (const [name, handle] of dirHandle.entries()) {
+    const path = pathPrefix ? `${pathPrefix}/${name}` : name;
+
+    if (handle.kind === "file" && isImageFileName(name)) {
+      const file = await handle.getFile();
+      addImageToLibrary(library, file, path);
+    }
+
+    if (handle.kind === "directory") {
+      await collectImagesFromDirectory(handle, library, path);
+    }
+  }
+
+  return library;
+}
+
+async function readConversationData(fileHandle) {
+  const file = await fileHandle.getFile();
+  const text = await file.text();
+  const data = JSON.parse(text);
+
+  if (!isConversationCollection(data)) {
+    throw new Error("invalid-conversations-json");
+  }
+
+  return data;
+}
+
+function showLoadedData(data, imageLibrary = createEmptyImageLibrary()) {
+  closeImageLightbox();
+  setImageLibrary(imageLibrary);
+  showList(data);
 }
 
 button.addEventListener("click", async () => {
@@ -407,16 +808,8 @@ button.addEventListener("click", async () => {
       return;
     }
 
-    const file = await fileHandle.getFile();
-    const text = await file.text();
-    const data = JSON.parse(text);
-
-    if (!isConversationCollection(data)) {
-      showMessage("The conversation data format is not recognized. Please choose conversations.json.", "error");
-      return;
-    }
-
-    showList(data);
+    const data = await readConversationData(fileHandle);
+    showLoadedData(data);
 
   } catch (e) {
     if (isAbortError(e)) {
@@ -428,13 +821,53 @@ button.addEventListener("click", async () => {
   }
 });
 
+folderButton.addEventListener("click", async () => {
+  result.textContent = "Loading export folder...";
+
+  try {
+    if (!window.showDirectoryPicker) {
+      showMessage("This browser does not support folder selection. Please open this page in Chrome or Edge.", "error");
+      return;
+    }
+
+    const dirHandle = await window.showDirectoryPicker();
+    const conversationsHandle = await findConversationsJson(dirHandle);
+
+    if (!conversationsHandle) {
+      showMessage("conversations.json was not found. Please choose an extracted ChatGPT export folder.", "error");
+      return;
+    }
+
+    result.textContent = "Loading conversations.json and images...";
+
+    const data = await readConversationData(conversationsHandle);
+    const imageLibrary = await collectImagesFromDirectory(dirHandle);
+    result.textContent = `Loaded conversations.json and ${imageLibrary.count.toLocaleString()} images. Preparing view...`;
+    showLoadedData(data, imageLibrary);
+
+  } catch (e) {
+    if (isAbortError(e)) {
+      showMessage("Folder selection was canceled.");
+      return;
+    }
+
+    showMessage("Could not load the export folder. Please check the folder contents.", "error");
+  }
+});
+
 // Show conversation list
 function showList(data) {
   result.innerHTML = "";
+  appendViewTabs(data, "chat");
 
   const header = document.createElement("h3");
   header.textContent = "Conversation List";
   result.appendChild(header);
+
+  const imageInfo = document.createElement("div");
+  imageInfo.className = "count";
+  imageInfo.textContent = `Local images: ${currentImageLibrary.count.toLocaleString()}`;
+  result.appendChild(imageInfo);
 
   const count = document.createElement("div");
   count.className = "count";
