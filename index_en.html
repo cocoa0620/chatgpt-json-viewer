@@ -1110,29 +1110,37 @@ function getPathBaseName(path) {
   return path.split(/[\\/]/).pop() || path;
 }
 
+async function collectAllFiles(dirHandle, path = "") {
+  const files = [];
+
+  for await (const [name, handle] of dirHandle.entries()) {
+    const currentPath = path ? `${path}/${name}` : name;
+
+    if (handle.kind === "file") {
+      files.push({ handle, path: currentPath });
+    } else if (handle.kind === "directory") {
+      const subFiles = await collectAllFiles(handle, currentPath);
+      files.push(...subFiles);
+    }
+  }
+
+  return files;
+}
+
 // Find conversations.json or conversations-000.json files inside the selected folder
-async function findConversationJsonFiles(dirHandle, pathPrefix = "") {
+function findConversationJsonFiles(files) {
   const exactMatches = [];
   const segmentedMatches = [];
   const allFiles = [];
 
-  for await (const [name, handle] of dirHandle.entries()) {
-    const path = pathPrefix ? `${pathPrefix}/${name}` : name;
-
-    if (handle.kind === "directory") {
-      const nested = await findConversationJsonFiles(handle, path);
-      allFiles.push(...nested.allFiles);
-      exactMatches.push(...nested.exactMatches);
-      segmentedMatches.push(...nested.segmentedMatches);
-      continue;
-    }
-
-    if (handle.kind !== "file") continue;
-
+  for (const { handle, path } of files) {
+    const name = getPathBaseName(path);
+    const directory = getPathDirectory(path);
     allFiles.push(path);
+
     const normalizedName = name.toLowerCase();
     if (normalizedName === "conversations.json") {
-      exactMatches.push({ handle, name, path });
+      exactMatches.push({ handle, name, path, directory });
       continue;
     }
 
@@ -1143,7 +1151,7 @@ async function findConversationJsonFiles(dirHandle, pathPrefix = "") {
       handle,
       name,
       path,
-      directory: pathPrefix,
+      directory,
       sequence: Number(segmentedMatch[1])
     });
   }
@@ -1217,7 +1225,8 @@ function selectSegmentedConversationFiles(segmentedMatches) {
 async function getConversationJsonSelection(dirHandle) {
   console.log("[getConversationJsonSelection called]", dirHandle.name);
   console.time("detect conversation json");
-  const { allFiles, exactMatches, segmentedMatches } = await findConversationJsonFiles(dirHandle);
+  const directoryFiles = await collectAllFiles(dirHandle);
+  const { allFiles, exactMatches, segmentedMatches } = findConversationJsonFiles(directoryFiles);
   console.timeEnd("detect conversation json");
   console.log("[detected all files count]", allFiles.length);
   console.log("[detected all files sample]", allFiles.slice(0, 50));
