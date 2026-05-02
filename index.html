@@ -463,7 +463,7 @@
 <body>
 
 <h1>バックアップビューア</h1>
-<button id="selectFile">conversations.json を選ぶ</button>
+<button id="selectFile">会話JSONを選ぶ</button>
 <button id="selectExportFolder">解凍後のエクスポートフォルダを選択</button>
 
 <div id="result"></div>
@@ -1989,33 +1989,75 @@ async function showImageView(data) {
   renderImages();
 }
 
-const segmentedConversationPattern = /^conversations-(\d+)\.json$/;
+const segmentedConversationPattern = /^conversations-(\d+)\.json$/i;
 
-// conversations.json または conversations-000.json 形式をルート直下だけから探す
-async function findConversationJsonFiles(dirHandle) {
+// conversations.json または conversations-000.json 形式をフォルダ内から探す
+async function findConversationJsonFiles(dirHandle, pathPrefix = "") {
   const exactMatches = [];
   const segmentedMatches = [];
 
   for await (const [name, handle] of dirHandle.entries()) {
-    if (handle.kind !== "file") continue;
+    const path = pathPrefix ? `${pathPrefix}/${name}` : name;
 
-    if (name === "conversations.json") {
-      exactMatches.push({ handle, name, path: name });
+    if (handle.kind === "directory") {
+      const nested = await findConversationJsonFiles(handle, path);
+      exactMatches.push(...nested.exactMatches);
+      segmentedMatches.push(...nested.segmentedMatches);
       continue;
     }
 
-    const segmentedMatch = name.match(segmentedConversationPattern);
-    if (segmentedMatch) {
-      segmentedMatches.push({
-        handle,
-        name,
-        path: name,
-        sequence: Number(segmentedMatch[1])
-      });
+    if (handle.kind !== "file") continue;
+
+    const normalizedName = name.toLowerCase();
+    if (normalizedName === "conversations.json") {
+      exactMatches.push({ handle, name, path });
+      continue;
     }
+
+    const segmentedMatch = normalizedName.match(segmentedConversationPattern);
+    if (!segmentedMatch) continue;
+
+    segmentedMatches.push({
+      handle,
+      name,
+      path,
+      directory: pathPrefix,
+      sequence: Number(segmentedMatch[1])
+    });
   }
 
   return { exactMatches, segmentedMatches };
+}
+
+function getDirectoryDepth(directory) {
+  return directory ? directory.split("/").length : 0;
+}
+
+function getDisplayPath(fileInfo) {
+  return fileInfo.path || fileInfo.name;
+}
+
+function selectSegmentedConversationFiles(segmentedMatches) {
+  const groups = new Map();
+
+  for (const match of segmentedMatches) {
+    const directory = match.directory || "";
+    if (!groups.has(directory)) {
+      groups.set(directory, []);
+    }
+    groups.get(directory).push(match);
+  }
+
+  const groupedFiles = [...groups.values()].map((files) =>
+    files.sort((a, b) => a.sequence - b.sequence || a.name.localeCompare(b.name))
+  );
+
+  groupedFiles.sort((a, b) => {
+    const directoryCompare = getDirectoryDepth(a[0].directory) - getDirectoryDepth(b[0].directory);
+    return directoryCompare || (a[0].directory || "").localeCompare(b[0].directory || "");
+  });
+
+  return groupedFiles[0] || [];
 }
 
 async function getConversationJsonSelection(dirHandle) {
@@ -2035,11 +2077,11 @@ async function getConversationJsonSelection(dirHandle) {
   }
 
   if (segmentedMatches.length > 0) {
-    segmentedMatches.sort((a, b) => a.sequence - b.sequence || a.name.localeCompare(b.name));
-    const first = segmentedMatches[0].name;
-    const last = segmentedMatches[segmentedMatches.length - 1].name;
+    const files = selectSegmentedConversationFiles(segmentedMatches);
+    const first = getDisplayPath(files[0]);
+    const last = getDisplayPath(files[files.length - 1]);
     return {
-      files: segmentedMatches,
+      files,
       label: first === last ? `Loaded: ${first}` : `Loaded: ${first} ～ ${last}`
     };
   }
@@ -2177,7 +2219,7 @@ folderButton.addEventListener("click", async () => {
     const conversationSelection = await getConversationJsonSelection(dirHandle);
 
     if (!conversationSelection) {
-      showMessage("会話JSONが見つかりませんでした。解凍済みのChatGPTエクスポートフォルダを選んでください。", "error");
+      showMessage("conversations.json または conversations-000.json などの会話JSONが見つかりませんでした。解凍済みのChatGPTエクスポートフォルダを選んでください。", "error");
       return;
     }
 
