@@ -241,6 +241,11 @@
       gap: 8px;
     }
 
+    #imageViewFilterBar {
+      position: relative;
+      z-index: 1;
+    }
+
     .viewTab {
       margin: 0;
     }
@@ -465,6 +470,7 @@
 <h1>バックアップビューア</h1>
 <button id="selectFile">会話JSONを選ぶ</button>
 <button id="selectExportFolder">解凍後のエクスポートフォルダを選択</button>
+<input id="exportFolderInput" type="file" webkitdirectory directory multiple hidden>
 
 <div id="result"></div>
 
@@ -477,6 +483,7 @@
 <script>
 const fileButton = document.getElementById("selectFile");
 const folderButton = document.getElementById("selectExportFolder");
+const exportFolderInput = document.getElementById("exportFolderInput");
 const result = document.getElementById("result");
 const imageLightbox = document.getElementById("imageLightbox");
 const imageLightboxImage = document.getElementById("imageLightboxImage");
@@ -1842,16 +1849,31 @@ function appendViewTabs(data, activeView) {
 }
 
 function getImageViewKind(file) {
-  const path = currentImageLibrary.filePaths.get(file) || file.name;
-  const name = file.name;
-  const pathParts = String(path).split(/[\\/]/).filter(Boolean);
+  const path = String(currentImageLibrary.filePaths.get(file) || "");
+  const parts = path.split(/[\\/]/).filter(Boolean);
 
-  if (pathParts.slice(0, -1).some((part) => /^user-/i.test(part))) return "assistant";
-  if (pathParts.length === 1) return "user";
-  if (/^file_/i.test(name)) return "assistant";
-  if (/^file-/i.test(name)) return "user";
+  if (parts.some((part) => /^user-/i.test(part))) {
+    return "gpt";
+  }
 
   return "user";
+}
+
+function classifyImagesOnce(files) {
+  const imageState = {
+    all: [],
+    user: [],
+    gpt: []
+  };
+
+  for (const file of files) {
+    const kind = getImageViewKind(file);
+    const bucket = kind === "gpt" ? imageState.gpt : imageState.user;
+    imageState.all.push(file);
+    bucket.push(file);
+  }
+
+  return imageState;
 }
 
 function createImageTile(file) {
@@ -1904,7 +1926,6 @@ async function showImageView(data) {
   const viewToken = ++activeViewToken;
   result.innerHTML = "";
   appendViewTabs(data, "images");
-
   const header = document.createElement("h3");
   header.textContent = "画像一覧";
   result.appendChild(header);
@@ -1938,8 +1959,21 @@ async function showImageView(data) {
     const bPath = currentImageLibrary.filePaths.get(b) || b.name;
     return aPath.localeCompare(bPath);
   });
-  const userFiles = files.filter((file) => getImageViewKind(file) === "user");
-  const assistantFiles = files.filter((file) => getImageViewKind(file) === "assistant");
+  console.log(
+    "[image files sample]",
+    files
+      .slice(0, 20)
+      .map(f => currentImageLibrary.filePaths.get(f) || f.name)
+  );
+  const imageState = classifyImagesOnce(files);
+  console.log("[imageState check]", {
+    all: imageState.all.length,
+    user: imageState.user.length,
+    gpt: imageState.gpt.length,
+    allFirst: imageState.all.slice(0, 5).map(f => currentImageLibrary.filePaths.get(f) || f.name),
+    userFirst: imageState.user.slice(0, 5).map(f => currentImageLibrary.filePaths.get(f) || f.name),
+    gptFirst: imageState.gpt.slice(0, 5).map(f => currentImageLibrary.filePaths.get(f) || f.name)
+  });
 
   const count = document.createElement("div");
   count.className = "count";
@@ -1948,59 +1982,88 @@ async function showImageView(data) {
 
   const filters = document.createElement("div");
   filters.className = "viewTabs";
-  const body = document.createElement("div");
+  filters.id = "imageViewFilterBar";
+  const imageViewBody = document.createElement("div");
   let activeFilter = "all";
 
   const filterDefs = [
-    { key: "all", label: "すべて" },
-    { key: "user", label: "ユーザー画像" },
-    { key: "assistant", label: "GPT生成画像" }
+    { key: "all", label: "すべて", count: imageState.all.length },
+    { key: "user", label: "ユーザー画像", count: imageState.user.length },
+    { key: "gpt", label: "GPT生成画像", count: imageState.gpt.length }
   ];
   const filterButtons = filterDefs.map((filter) => {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "viewTab";
-    button.textContent = filter.label;
-    button.onclick = () => {
-      activeFilter = filter.key;
-      renderImages();
-    };
+    button.dataset.filter = filter.key;
+    button.textContent = `${filter.label} (${filter.count.toLocaleString()}件)`;
+    const filterKey = filter.key;
+    button.addEventListener(
+      "click",
+      () => {
+        console.log("[image filter click]", filterKey);
+        activeFilter = filterKey;
+        renderImages();
+      },
+      true
+    );
     filters.appendChild(button);
     return { ...filter, button };
   });
 
-  const renderImages = () => {
+  console.log("[image filter buttons created]", filterButtons.map((f) => f.key));
+
+  function renderImages() {
+    console.log("[renderImages]", activeFilter);
     filterButtons.forEach((filter) => {
-      filter.button.className = filter.key === activeFilter ? "viewTab isActive" : "viewTab";
+      filter.button.className =
+        filter.key === activeFilter ? "viewTab isActive" : "viewTab";
     });
 
     const fragment = document.createDocumentFragment();
-    if (activeFilter === "all" || activeFilter === "user") {
-      appendRenderedImageSection(fragment, "ユーザー画像", userFiles);
+    if (activeFilter === "all") {
+      appendRenderedImageSection(fragment, "すべての画像", imageState.all);
+    } else if (activeFilter === "user") {
+      appendRenderedImageSection(fragment, "ユーザー画像", imageState.user);
+    } else if (activeFilter === "gpt") {
+      appendRenderedImageSection(fragment, "GPT生成画像", imageState.gpt);
     }
-    if (activeFilter === "all" || activeFilter === "assistant") {
-      appendRenderedImageSection(fragment, "GPT生成画像", assistantFiles);
-    }
-    body.replaceChildren(fragment);
-  };
+    imageViewBody.replaceChildren(fragment);
+  }
 
   result.appendChild(filters);
-  result.appendChild(body);
+  result.appendChild(imageViewBody);
   renderImages();
 }
 
 const segmentedConversationPattern = /^conversations-(\d+)\.json$/i;
 
+function getFileSelectionPath(file) {
+  return file.webkitRelativePath || file.relativePath || file.name;
+}
+
+function getPathDirectory(path) {
+  const parts = path.split(/[\\/]/);
+  parts.pop();
+  return parts.join("/");
+}
+
+function getPathBaseName(path) {
+  return path.split(/[\\/]/).pop() || path;
+}
+
 // conversations.json または conversations-000.json 形式をフォルダ内から探す
 async function findConversationJsonFiles(dirHandle, pathPrefix = "") {
   const exactMatches = [];
   const segmentedMatches = [];
+  const allFiles = [];
 
   for await (const [name, handle] of dirHandle.entries()) {
     const path = pathPrefix ? `${pathPrefix}/${name}` : name;
 
     if (handle.kind === "directory") {
       const nested = await findConversationJsonFiles(handle, path);
+      allFiles.push(...nested.allFiles);
       exactMatches.push(...nested.exactMatches);
       segmentedMatches.push(...nested.segmentedMatches);
       continue;
@@ -2008,6 +2071,7 @@ async function findConversationJsonFiles(dirHandle, pathPrefix = "") {
 
     if (handle.kind !== "file") continue;
 
+    allFiles.push(path);
     const normalizedName = name.toLowerCase();
     if (normalizedName === "conversations.json") {
       exactMatches.push({ handle, name, path });
@@ -2026,7 +2090,39 @@ async function findConversationJsonFiles(dirHandle, pathPrefix = "") {
     });
   }
 
-  return { exactMatches, segmentedMatches };
+  return { allFiles, exactMatches, segmentedMatches };
+}
+
+function findConversationJsonFilesInFileList(files) {
+  const allFiles = [];
+  const exactMatches = [];
+  const segmentedMatches = [];
+
+  for (const file of files) {
+    const path = getFileSelectionPath(file);
+    const name = getPathBaseName(path);
+    const directory = getPathDirectory(path);
+    allFiles.push(path);
+
+    const normalizedName = name.toLowerCase();
+    if (normalizedName === "conversations.json") {
+      exactMatches.push({ file, name, path, directory });
+      continue;
+    }
+
+    const segmentedMatch = normalizedName.match(segmentedConversationPattern);
+    if (!segmentedMatch) continue;
+
+    segmentedMatches.push({
+      file,
+      name,
+      path,
+      directory,
+      sequence: Number(segmentedMatch[1])
+    });
+  }
+
+  return { allFiles, exactMatches, segmentedMatches };
 }
 
 function getDirectoryDepth(directory) {
@@ -2061,9 +2157,19 @@ function selectSegmentedConversationFiles(segmentedMatches) {
 }
 
 async function getConversationJsonSelection(dirHandle) {
+  console.log("[getConversationJsonSelection called]", dirHandle.name);
   console.time("detect conversation json");
-  const { exactMatches, segmentedMatches } = await findConversationJsonFiles(dirHandle);
+  const { allFiles, exactMatches, segmentedMatches } = await findConversationJsonFiles(dirHandle);
   console.timeEnd("detect conversation json");
+  console.log("[detected all files count]", allFiles.length);
+  console.log("[detected all files sample]", allFiles.slice(0, 50));
+  console.log("[exact conversations]", exactMatches.map(getDisplayPath));
+  console.log("[segmented conversations]", segmentedMatches.map(getDisplayPath));
+  console.log("[chatgpt-json-viewer] export folder files", allFiles);
+  console.log("[chatgpt-json-viewer] detected conversation json files", [
+    ...exactMatches,
+    ...segmentedMatches.sort((a, b) => a.sequence - b.sequence || a.path.localeCompare(b.path))
+  ].map(getDisplayPath));
 
   if (exactMatches.length > 0) {
     exactMatches.sort((a, b) => {
@@ -2089,6 +2195,40 @@ async function getConversationJsonSelection(dirHandle) {
   return null;
 }
 
+function getConversationJsonSelectionFromFiles(files) {
+  console.time("detect conversation json");
+  const { allFiles, exactMatches, segmentedMatches } = findConversationJsonFilesInFileList(files);
+  console.timeEnd("detect conversation json");
+  console.log("[chatgpt-json-viewer] export folder files", allFiles);
+  console.log("[chatgpt-json-viewer] detected conversation json files", [
+    ...exactMatches,
+    ...segmentedMatches.sort((a, b) => a.sequence - b.sequence || a.path.localeCompare(b.path))
+  ].map(getDisplayPath));
+
+  if (exactMatches.length > 0) {
+    exactMatches.sort((a, b) => {
+      const depth = a.path.split(/[\\/]/).length - b.path.split(/[\\/]/).length;
+      return depth || a.path.localeCompare(b.path);
+    });
+    return {
+      files: [exactMatches[0]],
+      label: `Loaded: ${getDisplayPath(exactMatches[0])}`
+    };
+  }
+
+  if (segmentedMatches.length > 0) {
+    const selectedFiles = selectSegmentedConversationFiles(segmentedMatches);
+    const first = getDisplayPath(selectedFiles[0]);
+    const last = getDisplayPath(selectedFiles[selectedFiles.length - 1]);
+    return {
+      files: selectedFiles,
+      label: first === last ? `Loaded: ${first}` : `Loaded: ${first} ～ ${last}`
+    };
+  }
+
+  return null;
+}
+
 async function collectImagesFromDirectory(dirHandle, library = createEmptyImageLibrary(), pathPrefix = "") {
   for await (const [name, handle] of dirHandle.entries()) {
     const path = pathPrefix ? `${pathPrefix}/${name}` : name;
@@ -2106,8 +2246,21 @@ async function collectImagesFromDirectory(dirHandle, library = createEmptyImageL
   return library;
 }
 
-async function readConversationData(fileHandle) {
-  const file = await fileHandle.getFile();
+function collectImagesFromFiles(files) {
+  const library = createEmptyImageLibrary();
+
+  for (const file of files) {
+    const path = getFileSelectionPath(file);
+    if (isImageFileName(path)) {
+      addImageToLibrary(library, file, path);
+    }
+  }
+
+  return library;
+}
+
+async function readConversationData(fileSource) {
+  const file = fileSource.getFile ? await fileSource.getFile() : fileSource.file || fileSource;
   const text = await file.text();
   const data = JSON.parse(text);
 
@@ -2122,7 +2275,7 @@ async function readConversationFiles(files) {
   const chunks = [];
 
   for (const fileInfo of files) {
-    chunks.push(await readConversationData(fileInfo.handle));
+    chunks.push(await readConversationData(fileInfo.handle || fileInfo.file || fileInfo));
   }
 
   if (chunks.length === 1) return chunks[0];
@@ -2206,7 +2359,34 @@ fileButton.addEventListener("click", async () => {
   }
 });
 
-folderButton.addEventListener("click", async () => {
+async function loadExportFolderFromFileList(files) {
+  result.textContent = "エクスポートフォルダを読み込んでいます…";
+
+  const selectedFiles = Array.from(files || []);
+  if (selectedFiles.length === 0) {
+    showMessage("フォルダ選択がキャンセルされました。");
+    return;
+  }
+
+  const conversationSelection = getConversationJsonSelectionFromFiles(selectedFiles);
+
+  if (!conversationSelection) {
+    showMessage("conversations.json または conversations-000.json などの会話JSONが見つかりませんでした。解凍済みのChatGPTエクスポートフォルダを選んでください。", "error");
+    return;
+  }
+
+  result.textContent = "会話JSONを読み込んでいます…";
+
+  console.time("load conversation json");
+  const data = await readConversationFiles(conversationSelection.files);
+  console.timeEnd("load conversation json");
+  result.textContent = `${conversationSelection.label} を読み込みました。画像を読み込んでいます…`;
+  const imageLibrary = collectImagesFromFiles(selectedFiles);
+  showLoadedData(data, imageLibrary, conversationSelection.label);
+}
+
+async function loadExportFolderFromDirectoryPicker() {
+  console.log("[loadExportFolderFromDirectoryPicker called]");
   result.textContent = "エクスポートフォルダを読み込んでいます…";
 
   try {
@@ -2216,6 +2396,7 @@ folderButton.addEventListener("click", async () => {
     }
 
     const dirHandle = await window.showDirectoryPicker();
+    console.log("[directory picker selected]", dirHandle.name);
     const conversationSelection = await getConversationJsonSelection(dirHandle);
 
     if (!conversationSelection) {
@@ -2237,6 +2418,38 @@ folderButton.addEventListener("click", async () => {
       return;
     }
 
+    showMessage("エクスポートフォルダを読み込めませんでした。フォルダの内容を確認してください。", "error");
+  }
+}
+
+folderButton.addEventListener("click", () => {
+  if (window.showDirectoryPicker) {
+    console.log("[folder picker route]", "showDirectoryPicker");
+    loadExportFolderFromDirectoryPicker();
+    return;
+  }
+
+  if (exportFolderInput && "webkitdirectory" in exportFolderInput) {
+    console.log("[folder picker route]", "input webkitdirectory fallback");
+    showMessage("このブラウザではフォルダ選択に互換モードを使用します。ブラウザにアップロード確認のような表示が出る場合がありますが、処理はこのページ内でローカルに行われます。");
+    exportFolderInput.value = "";
+    exportFolderInput.click();
+    return;
+  }
+
+  showMessage("このブラウザはフォルダ選択に対応していません。Chrome または Edge で開いてください。", "error");
+});
+
+exportFolderInput.addEventListener("change", async () => {
+  try {
+    await loadExportFolderFromFileList(exportFolderInput.files);
+  } catch (e) {
+    if (isAbortError(e)) {
+      showMessage("フォルダ選択がキャンセルされました。");
+      return;
+    }
+
+    console.error(e);
     showMessage("エクスポートフォルダを読み込めませんでした。フォルダの内容を確認してください。", "error");
   }
 });
