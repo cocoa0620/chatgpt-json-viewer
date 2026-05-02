@@ -151,6 +151,14 @@
       color: #9b2c2c;
     }
 
+    .folderPrivacyNote {
+      max-width: 680px;
+      margin: -2px 0 16px;
+      color: var(--text-muted);
+      font-size: 0.86em;
+      line-height: 1.6;
+    }
+
     .hiddenMessageDivider {
       display: flex;
       align-items: center;
@@ -470,6 +478,7 @@
 <h1>バックアップビューア</h1>
 <button id="selectFile">会話JSONを選ぶ</button>
 <button id="selectExportFolder">解凍後のエクスポートフォルダを選択</button>
+<div class="folderPrivacyNote">選択したフォルダ内のJSONファイルは、このブラウザ内だけで読み込みます。GitHubや外部サーバーにはアップロードされません。</div>
 <input id="exportFolderInput" type="file" webkitdirectory directory multiple hidden>
 
 <div id="result"></div>

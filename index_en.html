@@ -79,6 +79,14 @@
       color: #9b2c2c;
     }
 
+    .folderPrivacyNote {
+      max-width: 680px;
+      margin: -2px 0 14px;
+      color: #555;
+      font-size: 0.86em;
+      line-height: 1.5;
+    }
+
     .conversationLine {
       cursor: pointer;
       margin-bottom: 6px;
@@ -297,6 +305,7 @@
 <h1>Backup Viewer</h1>
 <button id="selectFolder">Choose conversation JSON</button>
 <button id="selectExportFolder">Select unzipped export folder</button>
+<div class="folderPrivacyNote">JSON files in the selected folder are read only in this browser. They are not uploaded to GitHub or any external server.</div>
 <input id="exportFolderInput" type="file" webkitdirectory directory multiple hidden>
 
 <div id="result"></div>
